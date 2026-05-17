@@ -1,0 +1,1913 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quote Intelligence POC - Systematic Industries</title>
+    <style>
+        /* ── Reset ── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* ── Base ── */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            background-attachment: fixed;
+            color: #f1f5f9;
+            min-height: 100vh;
+            overflow-x: clip;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Utility helpers (replaces Tailwind) ── */
+        .hidden {
+            display: none !important;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .flex-col {
+            flex-direction: column;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .items-start {
+            align-items: flex-start;
+        }
+
+        .items-baseline {
+            align-items: baseline;
+        }
+
+        .justify-center {
+            justify-content: center;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .gap-2 {
+            gap: 8px;
+        }
+
+        .gap-3 {
+            gap: 12px;
+        }
+
+        .gap-4 {
+            gap: 16px;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .w-full {
+            width: 100%;
+        }
+
+        .ml-auto {
+            margin-left: auto;
+        }
+
+        .truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .whitespace-nowrap {
+            white-space: nowrap;
+        }
+
+        .uppercase {
+            text-transform: uppercase;
+        }
+
+        .tracking-wide {
+            letter-spacing: 0.05em;
+        }
+
+        .leading-relaxed {
+            line-height: 1.625;
+        }
+
+        .leading-tight {
+            line-height: 1.25;
+        }
+
+        .font-light {
+            font-weight: 300;
+        }
+
+        .font-medium {
+            font-weight: 500;
+        }
+
+        .font-semibold {
+            font-weight: 600;
+        }
+
+        .font-bold {
+            font-weight: 700;
+        }
+
+        .font-extrabold {
+            font-weight: 800;
+        }
+
+        .line-clamp-1 {
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+        }
+
+        .shrink-0 {
+            flex-shrink: 0;
+        }
+
+        .overflow-x-auto {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .relative {
+            position: relative;
+        }
+
+        .sticky {
+            position: sticky;
+        }
+
+        .top-0 {
+            top: 0;
+        }
+
+        .z-40 {
+            z-index: 40;
+        }
+
+        /* Text sizes */
+        .text-xs {
+            font-size: 12px;
+        }
+
+        .text-sm {
+            font-size: 14px;
+        }
+
+        .text-base {
+            font-size: 16px;
+        }
+
+        .text-lg {
+            font-size: 18px;
+        }
+
+        .text-xl {
+            font-size: 20px;
+        }
+
+        /* Colors */
+        .text-white {
+            color: #ffffff;
+        }
+
+        .text-slate-300 {
+            color: #cbd5e1;
+        }
+
+        .text-slate-400 {
+            color: #94a3b8;
+        }
+
+        .text-slate-500 {
+            color: #64748b;
+        }
+
+        .text-indigo-400 {
+            color: #818cf8;
+        }
+
+        .text-emerald-400 {
+            color: #34d399;
+        }
+
+        .text-amber-400 {
+            color: #fbbf24;
+        }
+
+        .text-rose-400 {
+            color: #fb7185;
+        }
+
+        /* Spacing */
+        .p-3 {
+            padding: 12px;
+        }
+
+        .p-4 {
+            padding: 16px;
+        }
+
+        .p-5 {
+            padding: 20px;
+        }
+
+        .p-8 {
+            padding: 32px;
+        }
+
+        .mb-2 {
+            margin-bottom: 8px;
+        }
+
+        .mb-4 {
+            margin-bottom: 16px;
+        }
+
+        .mb-5 {
+            margin-bottom: 20px;
+        }
+
+        .mb-8 {
+            margin-bottom: 32px;
+        }
+
+        .mt-1 {
+            margin-top: 4px;
+        }
+
+        .mt-2 {
+            margin-top: 8px;
+        }
+
+        .pb-8 {
+            padding-bottom: 32px;
+        }
+
+        .pt-2 {
+            padding-top: 8px;
+        }
+
+        .px-2 {
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+
+        .py-2 {
+            padding-top: 8px;
+            padding-bottom: 8px;
+        }
+
+        /* Borders & Radius */
+        .rounded-full {
+            border-radius: 9999px;
+        }
+
+        .rounded-xl {
+            border-radius: 12px;
+        }
+
+        .rounded-2xl {
+            border-radius: 16px;
+        }
+
+        .rounded-lg {
+            border-radius: 8px;
+        }
+
+        .border {
+            border-width: 1px;
+            border-style: solid;
+        }
+
+        .border-b {
+            border-bottom-width: 1px;
+            border-bottom-style: solid;
+        }
+
+        /* Width/Height helpers for icons */
+        .icon-xs {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        .icon-sm {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .icon-md {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .icon-lg {
+            width: 28px;
+            height: 28px;
+            flex-shrink: 0;
+        }
+
+        .icon-box-sm {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .icon-box-md {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .icon-box-lg {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* Backgrounds */
+        .bg-indigo {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        }
+
+        .bg-emerald {
+            background: linear-gradient(135deg, #10b981, #0d9488);
+        }
+
+        .bg-indigo-faint {
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .bg-emerald-faint {
+            background: rgba(52, 211, 153, 0.1);
+        }
+
+        .bg-amber-faint {
+            background: rgba(251, 191, 36, 0.1);
+        }
+
+        .bg-slate-dark {
+            background: rgba(15, 23, 42, 0.9);
+        }
+
+        .bg-slate-panel {
+            background: rgba(30, 41, 59, 0.5);
+        }
+
+        .border-indigo-faint {
+            border-color: rgba(99, 102, 241, 0.25);
+        }
+
+        .border-emerald-faint {
+            border-color: rgba(52, 211, 153, 0.2);
+        }
+
+        .border-amber-faint {
+            border-color: rgba(251, 191, 36, 0.2);
+        }
+
+        .border-slate-faint {
+            border-color: rgba(148, 163, 184, 0.15);
+        }
+
+        .border-slate-med {
+            border-color: rgba(148, 163, 184, 0.25);
+        }
+
+        /* ── Branded components ── */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 16px;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #6366f1, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .btn-primary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            min-height: 52px;
+            padding: 14px 20px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border: none;
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            touch-action: manipulation;
+            transition: transform 0.2s, box-shadow 0.2s;
+            -webkit-appearance: none;
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: scale(0.98);
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ── Form controls ── */
+        /* NOTE: NO -webkit-appearance:none on selects — that breaks native pickers on iOS */
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: #0f172a;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            border-radius: 12px;
+            color: #f1f5f9;
+            font-size: 16px;
+            font-family: inherit;
+            outline: none;
+            min-height: 50px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+        }
+
+        .form-input::placeholder {
+            color: #64748b;
+        }
+
+        /* Select: keep full native appearance so OS picker works on all platforms */
+        .form-select {
+            width: 100%;
+            padding: 14px 16px;
+            background: #0f172a;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            border-radius: 12px;
+            color: #f1f5f9;
+            font-size: 16px;
+            font-family: inherit;
+            outline: none;
+            min-height: 50px;
+        }
+
+        .form-select option {
+            background: #1e293b;
+            color: #f1f5f9;
+        }
+
+        .form-select option:disabled {
+            color: #64748b;
+        }
+
+        .select-wrapper {
+            position: relative;
+        }
+
+        /* ── Customer search suggestion list ── */
+        /* Sits inside the solid form card — no stacking context issues */
+        .cust-wrap {
+            position: relative;
+            z-index: 50;
+        }
+
+        .cust-suggestions {
+            display: none;
+            position: absolute;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            max-height: 220px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-top: -2px;
+        }
+
+        .cust-suggestions.open {
+            display: block;
+        }
+
+        .cust-input-open {
+            border-bottom-left-radius: 0 !important;
+            border-bottom-right-radius: 0 !important;
+            border-color: rgba(99, 102, 241, 0.4) !important;
+        }
+
+        .cust-item {
+            padding: 11px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+            -webkit-tap-highlight-color: rgba(99, 102, 241, 0.15);
+        }
+
+        .cust-item:last-child {
+            border-bottom: none;
+        }
+
+        .cust-item:active {
+            background: rgba(99, 102, 241, 0.15);
+        }
+
+        .cust-item-name {
+            font-size: 14px;
+            color: #f1f5f9;
+            line-height: 1.3;
+        }
+
+        .cust-item-meta {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        /* ── Labels ── */
+        .field-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
+        }
+
+        /* ── Picker button (used for both customer and size fields) ── */
+        .picker-btn {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 12px;
+            color: #f1f5f9;
+            font-size: 16px;
+            font-family: inherit;
+            min-height: 50px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            text-align: left;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            transition: border-color 0.2s;
+        }
+
+        .picker-btn .ph {
+            color: #64748b;
+        }
+
+        .picker-btn svg {
+            flex-shrink: 0;
+        }
+
+        /* ── Full-screen picker modal ── */
+        /* Lives directly on <body>, completely outside any stacking context.
+           Works identically on iOS Safari, Android Chrome, and desktop. */
+        #pickerOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: rgba(0, 0, 0, 0.55);
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+            align-items: flex-end;
+            /* bottom-sheet on mobile */
+            justify-content: center;
+        }
+
+        #pickerOverlay.open {
+            display: flex;
+        }
+
+        #pickerSheet {
+            width: 100%;
+            max-width: 520px;
+            background: #1e293b;
+            border-radius: 20px 20px 0 0;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            animation: sheetUp 0.25s ease-out;
+        }
+
+        @keyframes sheetUp {
+            from {
+                transform: translateY(100%);
+            }
+
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        #pickerHeader {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px 12px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+            flex-shrink: 0;
+        }
+
+        #pickerTitle {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        #pickerClose {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(148, 163, 184, 0.15);
+            border: none;
+            color: #94a3b8;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* Search box inside sheet (used for customer picker) */
+        #pickerSearch {
+            margin: 12px 16px 8px;
+            padding: 10px 14px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 10px;
+            color: #f1f5f9;
+            font-size: 15px;
+            font-family: inherit;
+            outline: none;
+            flex-shrink: 0;
+        }
+
+        #pickerSearch:focus {
+            border-color: #6366f1;
+        }
+
+        #pickerSearch::placeholder {
+            color: #64748b;
+        }
+
+        #pickerSearch.hidden {
+            display: none;
+        }
+
+        #pickerList {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            flex: 1;
+            padding: 4px 0 8px;
+        }
+
+        .picker-item {
+            padding: 14px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 15px;
+            color: #f1f5f9;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.07);
+            min-height: 52px;
+            -webkit-tap-highlight-color: rgba(99, 102, 241, 0.15);
+        }
+
+        .picker-item:last-child {
+            border-bottom: none;
+        }
+
+        .picker-item:active,
+        .picker-item.selected {
+            background: rgba(99, 102, 241, 0.15);
+        }
+
+        .picker-item-sub {
+            font-size: 11px;
+            color: #94a3b8;
+        }
+
+        /* ── Animations ── */
+        .slide-up {
+            animation: slideUp 0.5s forwards;
+            opacity: 0;
+            transform: translateY(16px);
+        }
+
+        @keyframes slideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        .animate-pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        /* ── Step loader ── */
+        .step-item {
+            opacity: 0.4;
+            transform: translateX(-8px);
+            transition: all 0.4s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .step-item.active {
+            opacity: 1;
+            transform: translateX(0);
+            color: #10b981;
+        }
+
+        .step-item.done {
+            opacity: 0.8;
+            transform: translateX(0);
+            color: #94a3b8;
+        }
+
+        .step-circle {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 11px;
+        }
+
+        /* ── Signal dots ── */
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+            margin-top: 4px;
+        }
+
+        .dot.green {
+            background: #10b981;
+            box-shadow: 0 0 8px #10b981;
+        }
+
+        .dot.amber {
+            background: #f59e0b;
+            box-shadow: 0 0 8px #f59e0b;
+        }
+
+        .dot.red {
+            background: #f43f5e;
+            box-shadow: 0 0 8px #f43f5e;
+        }
+
+        .dot.blue {
+            background: #38bdf8;
+            box-shadow: 0 0 8px #38bdf8;
+        }
+
+        /* ── Price bar ── */
+        .price-bar {
+            height: 14px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 7px;
+            position: relative;
+        }
+
+        .price-bar-floor {
+            position: absolute;
+            left: 0;
+            height: 100%;
+            background: rgba(244, 63, 94, 0.3);
+            border-radius: 7px 0 0 7px;
+        }
+
+        .price-bar-suggested {
+            position: absolute;
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #6366f1);
+            border-radius: 4px;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+            transition: width 1s ease-out;
+        }
+
+        /* ── SVG safe sizing ── */
+        svg {
+            max-width: 100%;
+            height: auto;
+            flex-shrink: 0;
+            display: block;
+        }
+
+        /* ── Header ── */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            border-bottom: 1px solid rgba(30, 41, 59, 0.8);
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .header-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        .header-logo {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+
+        .header-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #34d399;
+            background: rgba(52, 211, 153, 0.1);
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(52, 211, 153, 0.2);
+            white-space: nowrap;
+        }
+
+        .pulse-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #34d399;
+            flex-shrink: 0;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        /* ── Main layout ── */
+        .main-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 16px;
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        @media (min-width: 1024px) {
+            .main-grid {
+                display: grid;
+                grid-template-columns: 380px 1fr;
+                gap: 32px;
+                padding: 32px 24px;
+                align-items: start;
+            }
+
+            .form-panel {
+                position: sticky;
+                top: 80px;
+            }
+        }
+
+        /* ── Form panel ── */
+        .form-panel {
+            width: 100%;
+        }
+
+        .results-panel {
+            width: 100%;
+        }
+
+        /* ── Form collapse toggle (mobile only) ── */
+        .form-collapse-btn {
+            display: none;
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 12px;
+            color: #a5b4fc;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 12px;
+            touch-action: manipulation;
+            font-family: inherit;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .form-collapse-btn.visible {
+            display: flex;
+        }
+
+        .form-inner {
+            transition: all 0.3s ease;
+        }
+
+        .form-inner.collapsed {
+            display: none;
+        }
+
+        /* ── Form internals ── */
+        .form-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .form-subtitle {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        .form-header {
+            margin-bottom: 20px;
+        }
+
+        .form-fields {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        /* ── Empty / Loading states ── */
+        #emptyState {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 48px 32px;
+            min-height: 300px;
+        }
+
+        #loadingState {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 48px 32px;
+            min-height: 300px;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        #loadingState.flex {
+            display: flex;
+        }
+
+        /* ── Results ── */
+        #resultsState {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+            padding-bottom: 32px;
+        }
+
+        #resultsState.flex {
+            display: flex;
+        }
+
+        /* Price card */
+        .price-card {
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.1);
+        }
+
+        .price-card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .price-badge {
+            margin-left: auto;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: rgba(251, 191, 36, 0.1);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            flex-shrink: 0;
+        }
+
+        .price-display {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .price-figures {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .price-figure {
+            font-size: clamp(1.75rem, 7vw, 2.5rem);
+            font-weight: 800;
+        }
+
+        .price-dash {
+            font-size: 20px;
+            color: #64748b;
+            font-weight: 300;
+        }
+
+        .price-unit {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-top: 6px;
+        }
+
+        .price-bar-wrap {
+            margin-bottom: 20px;
+        }
+
+        .price-bar-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 11px;
+        }
+
+        .reasoning-box {
+            padding: 16px;
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .reasoning-box p {
+            font-size: 13px;
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+
+        /* Context cards grid */
+        .context-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        @media (min-width: 600px) {
+            .context-cards-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .ctx-card {
+            padding: 12px;
+        }
+
+        .ctx-label {
+            font-size: 10px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 2px;
+        }
+
+        .ctx-value {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .ctx-sub {
+            font-size: 10px;
+            color: #94a3b8;
+            margin-top: 3px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Signals + History */
+        .signals-history-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        @media (min-width: 768px) {
+            .signals-history-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Section headers */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .signal-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .signal-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .signal-text {
+            font-size: 12px;
+            color: #cbd5e1;
+            line-height: 1.5;
+        }
+
+        /* History table */
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .history-table th {
+            padding-bottom: 8px;
+            color: #94a3b8;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+        }
+
+        .history-table th:last-child {
+            text-align: center;
+        }
+
+        .history-table th:nth-child(2) {
+            text-align: right;
+        }
+
+        .history-table td {
+            padding: 10px 0;
+            vertical-align: middle;
+        }
+
+        .history-table td:nth-child(2) {
+            text-align: right;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .history-table td:last-child {
+            text-align: center;
+        }
+
+        .history-table tr {
+            border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+        }
+
+        .history-table tr:last-child {
+            border-bottom: none;
+        }
+
+        .outcome-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 600;
+            border-width: 1px;
+            border-style: solid;
+            white-space: nowrap;
+        }
+
+        .outcome-won {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .outcome-lost {
+            background: rgba(244, 63, 94, 0.1);
+            color: #fb7185;
+            border-color: rgba(244, 63, 94, 0.3);
+        }
+
+        /* Loading steps */
+        .steps-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .spin-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .spin-wrap h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        /* Empty state */
+        .empty-icon-wrap {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            flex-shrink: 0;
+        }
+
+        .empty-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .empty-desc {
+            font-size: 13px;
+            color: #94a3b8;
+            max-width: 280px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="header-inner">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div class="header-logo">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="form-title" style="font-size:14px;">Quote Intelligence</div>
+                    <div style="font-size:10px; color:#94a3b8; margin-top:1px;">Systematic Industries Pvt Ltd</div>
+                </div>
+            </div>
+            <div class="header-badge">
+                <span class="pulse-dot"></span>
+                AI Ready
+            </div>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="main-grid">
+
+        <!-- FORM PANEL -->
+        <div class="form-panel">
+            <button id="formToggleBtn" class="form-collapse-btn" onclick="toggleForm()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit Enquiry
+            </button>
+
+            <!-- Solid opaque card — NO backdrop-filter, NO glass effect.
+                 This ensures native <select> pickers work on all mobile browsers. -->
+            <div style="background:#1e293b; border:1px solid rgba(148,163,184,0.15); border-radius:16px; padding:20px;"
+                class="form-inner" id="formInner">
+                <div class="form-header">
+                    <div class="form-title">New Enquiry</div>
+                    <div class="form-subtitle">Enter details to run AI analysis</div>
+                </div>
+
+                <form id="enquiryForm" onsubmit="handleAnalyze(event)">
+                    <div class="form-fields">
+
+                        <div class="cust-wrap">
+                            <label class="field-label">Customer Name</label>
+                            <input type="text" id="custName" class="form-input" placeholder="Type to search customer..."
+                                autocomplete="off" autocorrect="off" autocapitalize="off"
+                                oninput="custSearch(this.value)" onfocus="custSearch(this.value)"
+                                onclick="custSearch(this.value)" required>
+                            <div id="custSuggestions" class="cust-suggestions"></div>
+                        </div>
+
+                        <div>
+                            <label class="field-label">Product Type</label>
+                            <select id="prodType" class="form-select" onchange="updateSizes()" required>
+                                <option value="">Select Product...</option>
+                                <option value="MS Wire">MS Wire</option>
+                                <option value="HC Patented Wire">HC Patented Wire</option>
+                                <option value="GI Wire">GI Wire</option>
+                                <option value="OFC Cable">OFC Cable</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="field-label">Size / Grade</label>
+                            <!-- ALL options hardcoded at parse time. JS uses disabled attribute
+                                 (not display:none / optgroup hiding) to show only relevant ones. -->
+                            <select id="prodSize" class="form-select" required>
+                                <option value="" id="sizeDefault">— Select Product Type first —</option>
+                                <option value="2.62 MM" data-prod="MS Wire">2.62 MM</option>
+                                <option value="1.38 MM" data-prod="MS Wire">1.38 MM</option>
+                                <option value="5.58 MM" data-prod="MS Wire">5.58 MM</option>
+                                <option value="5.10 MM" data-prod="HC Patented Wire">5.10 MM</option>
+                                <option value="4.90 MM" data-prod="HC Patented Wire">4.90 MM</option>
+                                <option value="1.25 MM IS" data-prod="GI Wire">1.25 MM IS</option>
+                                <option value="0.90 MM IS" data-prod="GI Wire">0.90 MM IS</option>
+                                <option value="2F 4.5mm FRP" data-prod="OFC Cable">2F 4.5mm FRP</option>
+                                <option value="6F 5.8mm FRP" data-prod="OFC Cable">6F 5.8mm FRP</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <div>
+                                <label class="field-label">Quantity</label>
+                                <input type="number" id="qty" class="form-input" placeholder="e.g. 25" required>
+                            </div>
+                            <div>
+                                <label class="field-label">Payment Terms</label>
+                                <select id="payTerms" class="form-select">
+                                    <option value="Advance">Advance</option>
+                                    <option value="30 Days" selected>30 Days</option>
+                                    <option value="60 Days">60 Days</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="padding-top:4px;">
+                            <button type="submit" id="analyzeBtn" class="btn-primary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                Analyze &amp; Get Quote
+                            </button>
+                        </div>
+
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- RESULTS PANEL -->
+        <div class="results-panel">
+
+            <!-- Empty State -->
+            <div id="emptyState" class="glass-card">
+                <div class="empty-icon-wrap">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                    </svg>
+                </div>
+                <div class="empty-title">Ready for Analysis</div>
+                <p class="empty-desc">Enter client details and hit Analyze to see the intelligence engine compile
+                    context, market signals, and price recommendations.</p>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="glass-card">
+                <div class="spin-wrap">
+                    <svg class="animate-spin" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="#818cf8" stroke-width="4" />
+                        <path style="opacity:0.75" fill="#818cf8" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <h3>AI Processing...</h3>
+                </div>
+                <div class="steps-list">
+                    <div class="step-item" id="step1"><span class="step-circle"></span><span>Retrieving CRM history
+                            &amp; relationship...</span></div>
+                    <div class="step-item" id="step2"><span class="step-circle"></span><span>Checking real-time FG stock
+                            levels...</span></div>
+                    <div class="step-item" id="step3"><span class="step-circle"></span><span>Analyzing machine capacity
+                            &amp; utilisation...</span></div>
+                    <div class="step-item" id="step4"><span class="step-circle"></span><span>Calculating RM baseline
+                            costs...</span></div>
+                    <div class="step-item" id="step5"><span class="step-circle"></span><span>Synthesizing market
+                            signals...</span></div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div id="resultsState">
+
+                <!-- Price Card -->
+                <div class="glass-card p-5 price-card slide-up">
+                    <div class="price-card-header">
+                        <div class="icon-box-sm bg-emerald">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                            </svg>
+                        </div>
+                        <span class="section-title">AI Suggested Price</span>
+                        <span class="price-badge">POC MODE</span>
+                    </div>
+                    <div class="price-display">
+                        <div class="price-figures">
+                            <span class="price-figure gradient-text" id="priceLow">--</span>
+                            <span class="price-dash">—</span>
+                            <span class="price-figure gradient-text" id="priceHigh">--</span>
+                        </div>
+                        <div class="price-unit" id="priceUnit">per MT</div>
+                    </div>
+                    <div class="price-bar-wrap">
+                        <div class="price-bar">
+                            <div class="price-bar-floor" id="barFloor" style="width:20%"></div>
+                            <div class="price-bar-suggested" id="barSuggested" style="left:20%;width:40%"></div>
+                        </div>
+                        <div class="price-bar-labels">
+                            <span style="color:#fb7185;">Floor: <span id="lblFloor"></span></span>
+                            <span style="color:#94a3b8;">Ceiling: <span id="lblCeil"></span></span>
+                        </div>
+                    </div>
+                    <div class="reasoning-box">
+                        <p id="aiReasoning"></p>
+                    </div>
+                </div>
+
+                <!-- Context Cards -->
+                <div class="context-cards-grid" id="contextCardsContainer"></div>
+
+                <!-- Signals + History -->
+                <div class="signals-history-grid">
+                    <div class="glass-card p-5 slide-up">
+                        <div class="section-header">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8"
+                                stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                            </svg>
+                            <span class="section-title">Market Signals</span>
+                        </div>
+                        <div id="marketSignalsContainer"></div>
+                    </div>
+
+                    <div class="glass-card p-5 slide-up">
+                        <div class="section-header">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8"
+                                stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span class="section-title">Recent History</span>
+                        </div>
+                        <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                            <table class="history-table">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align:left;">Date</th>
+                                        <th>Rate</th>
+                                        <th>Outcome</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyContainer"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /resultsState -->
+        </div><!-- /results-panel -->
+    </main>
+
+    <script>
+        // ── Customers ──
+        const CUSTOMERS = [
+            { name: "KEI Industries Ltd.", orders: 12, type: "Repeat" },
+            { name: "Polycab India Ltd.", orders: 28, type: "Repeat" },
+            { name: "Diamond Power Infrastructure Ltd", orders: 4, type: "Repeat" },
+            { name: "Fort Gloster Industries Ltd", orders: 2, type: "Repeat" },
+            { name: "Shree Hanuman Tubes Pvt Ltd", orders: 0, type: "New" },
+            { name: "Maccaferri Environmental Solutions", orders: 6, type: "Repeat" },
+            { name: "TRANSRAIL LIGHTING LTD", orders: 9, type: "Repeat" },
+            { name: "Chandresh Cables Ltd", orders: 15, type: "Repeat" },
+            { name: "Nirmal Networks", orders: 0, type: "New" },
+            { name: "Cisfiber Infra Solution", orders: 0, type: "New" },
+            { name: "Ascent Networks Pvt Ltd", orders: 3, type: "Repeat" },
+            { name: "Al Ma Cabrol FZC LLC", orders: 11, type: "Repeat" },
+            { name: "A-1 Fence Products Company", orders: 7, type: "Repeat" },
+            { name: "Sterlite Technologies Ltd", orders: 0, type: "New" },
+            { name: "V-Guard Industries Ltd", orders: 0, type: "New" }
+        ];
+
+        let selectedCustomer = null;
+
+        // ── Customer inline search ──
+        var custMatches = []; // module-level so custPick can always access it
+
+        function custSearch(q) {
+            var input = document.getElementById('custName');
+            var box = document.getElementById('custSuggestions');
+            var val = q ? q.trim().toLowerCase() : '';
+
+            custMatches = val === ''
+                ? CUSTOMERS
+                : CUSTOMERS.filter(function (c) { return c.name.toLowerCase().indexOf(val) !== -1; });
+
+            if (custMatches.length === 0) {
+                box.innerHTML = '';
+                box.classList.remove('open');
+                input.classList.remove('cust-input-open');
+                return;
+            }
+
+            var html = '';
+            for (var i = 0; i < custMatches.length; i++) {
+                var c = custMatches[i];
+                var meta = c.orders > 0
+                    ? c.orders + ' past orders · ' + c.type + ' client'
+                    : 'New client · First enquiry';
+                // Use onmousedown to prevent blur on desktop, and a data-attribute for mobile tap
+                html += '<div class="cust-item" onclick="custPick(' + i + ')" onmousedown="event.preventDefault(); custPick(' + i + ')">'
+                    + '<div class="cust-item-name">' + c.name + '</div>'
+                    + '<div class="cust-item-meta">' + meta + '</div>'
+                    + '</div>';
+            }
+            box.innerHTML = html;
+            box.classList.add('open');
+            input.classList.add('cust-input-open');
+        }
+
+        function custPick(idx) {
+            var c = custMatches[idx];
+            var input = document.getElementById('custName');
+            var box = document.getElementById('custSuggestions');
+            if (!c) return;
+            selectedCustomer = c;
+            input.value = c.name;
+            box.classList.remove('open');
+            input.classList.remove('cust-input-open');
+        }
+
+        // Close when tapping outside
+        document.addEventListener('touchstart', function (e) {
+            var box = document.getElementById('custSuggestions');
+            var input = document.getElementById('custName');
+            if (box && input && !box.contains(e.target) && e.target !== input) {
+                box.classList.remove('open');
+                input.classList.remove('cust-input-open');
+            }
+        }, { passive: true });
+        document.addEventListener('mousedown', function (e) {
+            var box = document.getElementById('custSuggestions');
+            var input = document.getElementById('custName');
+            if (box && input && !box.contains(e.target) && e.target !== input) {
+                box.classList.remove('open');
+                input.classList.remove('cust-input-open');
+            }
+        });
+
+        // ── Size options ──
+        // All <option> tags are hardcoded in HTML. On product change we simply
+        // disable+hide irrelevant options and enable relevant ones.
+        // Using the `disabled` attribute (not display:none or JS innerHTML) is
+        // the only approach that works reliably across iOS Safari, Android Chrome,
+        // and desktop browsers.
+        function updateSizes() {
+            const p = document.getElementById("prodType").value;
+            const s = document.getElementById("prodSize");
+            const opts = s.querySelectorAll("option[data-prod]");
+            s.value = ""; // reset selection
+
+            opts.forEach(opt => {
+                const match = opt.getAttribute("data-prod") === p;
+                opt.disabled = !match;
+                opt.hidden = !match;
+            });
+
+            // Update the default placeholder text
+            const def = document.getElementById("sizeDefault");
+            def.textContent = p ? "Select Size / Grade..." : "— Select Product Type first —";
+        }
+
+        // Init on load
+        updateSizes();
+
+        // ── Commentaries ──
+        const COMMENTARIES = [
+            "Given their status as a high-volume loyal customer, prioritizing this order makes sense. We have partial stock ready to dispatch. The suggested range keeps margins intact while honoring their preferred pricing tier.",
+            "This is a massive strategic account. With zero FG stock available and tight machine capacity, we should price near the ceiling to cover the expedited production costs without losing the bid.",
+            "They are a new client in a highly competitive segment. I recommend quoting near the floor price (₹{floor}) to capture market share and secure the initial relationship.",
+            "This customer is extremely price-sensitive and frequently compares quotes. Given we have full stock ready for immediate dispatch, we can justify a slight premium over the floor while remaining competitive.",
+            "Export order detected. The logistics overhead is higher, but so is their willingness to pay. Current RM base is steady. Suggest aiming for the higher end of the range to maximize margin.",
+            "A mid-volume repeat client. They value our quality over rock-bottom prices. We have a production window opening next week. The suggested mid-range price perfectly balances margin with our operational schedule.",
+            "Telecom sector client. OFC demand is currently surging. Since our OFC lines are running at 85% utilization, we should price at a premium (₹{high}) to manage the backlog.",
+            "This is a low-volume, high-maintenance order. Our capacity is currently free on the required machines, but we should not discount heavily. Suggest standard pricing.",
+            "First-time order from a major brand. To win this, we need to be aggressive. Quoting at ₹{low} gives us a foot in the door with a 6% margin above RM and conversion costs.",
+            "Project-based client requiring stringent quality checks. The conversion cost for this grade is higher than normal. The suggested price factors in a 2% buffer for testing and QA overhead.",
+            "Steady, reliable customer. They rarely negotiate if the price is fair. We can dispatch 50% immediately and the rest next week. The suggested rate reflects a standard 12% margin.",
+            "This client has a history of lost quotes due to our pricing being too high. We need to tighten the margin this time. Quoting at ₹{low} gives us a strong chance to win the business back.",
+            "Fencing sector client. This product has high market availability, so pricing power is low. We must remain close to the market average to secure the deal.",
+            "Premium quality segment. They specify top-tier raw materials. With TATA Steel RM costs at a premium, the absolute floor is ₹{floor}. Quote at ₹{high} to maintain profitability.",
+            "A standard enquiry with no special requirements. Stock is adequate. The suggested range provides a comfortable 10-15% margin above our base cost. Advise closing quickly."
+        ];
+
+        function generateDashboardData(client, prodType, size) {
+            const hash = (client.name.length + prodType.length) % 15;
+            let unit = prodType === "OFC Cable" ? "KME" : (prodType === "HC Patented Wire" ? "MTS" : "MT");
+            let rmCost = 53000, conversion = 3000;
+            if (prodType === "HC Patented Wire") { rmCost = 67000; conversion = 4500; }
+            if (prodType === "GI Wire") { rmCost = 53500; conversion = 5500; }
+            if (prodType === "OFC Cable") { rmCost = 3000; conversion = 800; }
+            const floor = rmCost + conversion;
+            const marketCeil = floor * 1.25;
+            const low = floor * 1.08;
+            const high = floor * 1.15;
+            let reasoningText = COMMENTARIES[hash];
+            reasoningText = reasoningText.replace("{floor}", floor.toLocaleString('en-IN'));
+            reasoningText = reasoningText.replace("{low}", low.toLocaleString('en-IN'));
+            reasoningText = reasoningText.replace("{high}", high.toLocaleString('en-IN'));
+            return {
+                custStr: client.name,
+                custSub: `${client.type} · ${client.orders > 0 ? client.orders + ' past orders' : 'First-time enquiry'}`,
+                stock: hash % 3 === 0 ? "0.0 " + unit : (hash % 3 === 1 ? "12.5 " + unit : "45.0 " + unit),
+                stockSub: hash % 3 === 0 ? "Full production required" : "Ready to dispatch now",
+                util: (60 + (hash * 2)) + "%",
+                utilSub: hash % 3 === 0 ? "Heavy Load - Expect delays" : "Manageable capacity",
+                eta: hash % 3 === 0 ? "8 Days" : "2 Days",
+                etaSub: hash % 3 === 0 ? "Production schedule + transit" : "In stock, ready for logistics",
+                rm: `₹${rmCost.toLocaleString('en-IN')}/${unit}`,
+                rmSub: prodType === "HC Patented Wire" ? "TATA Steel — HC72B" : "Rashmi Metallurgical",
+                low, high, floor, ceil: marketCeil, unit,
+                signals: [
+                    { c: hash % 3 === 0 ? "red" : "green", t: hash % 3 === 0 ? "Zero FG stock available — full production run required" : `Full stock of ${size} ready for immediate dispatch` },
+                    { c: client.type === "Repeat" ? "green" : "blue", t: client.type === "Repeat" ? `Strong relationship: ${client.orders} successful past orders` : "New customer — using market baseline pricing" },
+                    { c: "amber", t: `Market rate range (last 30 days): ₹${Math.round(low * 0.95).toLocaleString('en-IN')} – ₹${Math.round(marketCeil).toLocaleString('en-IN')}` }
+                ],
+                reasoning: reasoningText
+            };
+        }
+
+        const HISTORY = [
+            { d: "10-May-2026", r: "62,500", o: "won" },
+            { d: "02-May-2026", r: "64,100", o: "lost" },
+            { d: "28-Apr-2026", r: "61,800", o: "won" },
+            { d: "15-Apr-2026", r: "63,000", o: "won" },
+            { d: "01-Apr-2026", r: "65,200", o: "lost" }
+        ];
+
+        // ── Form collapse ──
+        function toggleForm() {
+            const inner = document.getElementById('formInner');
+            const btn = document.getElementById('formToggleBtn');
+            const collapsed = inner.classList.toggle('collapsed');
+            btn.innerHTML = collapsed
+                ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Edit Enquiry`
+                : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6l12 12"/></svg> Close`;
+        }
+
+        // ── Main analyze ──
+        async function handleAnalyze(e) {
+            e.preventDefault();
+            const custInput = document.getElementById("custName").value;
+            const prodType = document.getElementById("prodType").value;
+            const size = document.getElementById("prodSize").value;
+            if (!custInput || !prodType || !size) { alert("Please select customer and product details first."); return; }
+            if (!selectedCustomer || selectedCustomer.name !== custInput) {
+                const match = CUSTOMERS.find(c => c.name.toLowerCase() === custInput.toLowerCase());
+                selectedCustomer = match || { name: custInput, orders: 0, type: "New" };
+            }
+
+            const btn = document.getElementById("analyzeBtn");
+            const empty = document.getElementById("emptyState");
+            const loading = document.getElementById("loadingState");
+            const results = document.getElementById("resultsState");
+
+            btn.disabled = true;
+            empty.style.display = "none";
+            results.style.display = "none";
+            loading.style.display = "flex";
+
+            const steps = [1, 2, 3, 4, 5].map(i => document.getElementById(`step${i}`));
+            steps.forEach(s => { s.className = "step-item"; s.querySelector('.step-circle').textContent = ""; });
+
+            for (let i = 0; i < steps.length; i++) {
+                steps[i].classList.add("active");
+                await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
+                steps[i].classList.remove("active");
+                steps[i].classList.add("done");
+                steps[i].querySelector('.step-circle').textContent = "✓";
+            }
+            await new Promise(r => setTimeout(r, 400));
+
+            loading.style.display = "none";
+            results.style.display = "flex";
+
+            // Mobile: collapse form, show toggle btn, scroll to results
+            if (window.innerWidth < 1024) {
+                document.getElementById('formInner').classList.add('collapsed');
+                const tb = document.getElementById('formToggleBtn');
+                tb.classList.add('visible');
+                tb.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Edit Enquiry`;
+                setTimeout(() => document.querySelector('.results-panel').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+            }
+
+            const data = generateDashboardData(selectedCustomer, prodType, size);
+
+            // Context cards
+            document.getElementById("contextCardsContainer").innerHTML = `
+                <div class="glass-card ctx-card slide-up" style="grid-column:span 2">
+                    <div class="ctx-label">Customer</div>
+                    <div class="ctx-value" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${data.custStr}</div>
+                    <div class="ctx-sub">${data.custSub}</div>
+                </div>
+                <div class="glass-card ctx-card slide-up" style="animation-delay:0.05s">
+                    <div class="ctx-label">FG Stock</div>
+                    <div class="ctx-value">${data.stock}</div>
+                    <div class="ctx-sub">${data.stockSub}</div>
+                </div>
+                <div class="glass-card ctx-card slide-up" style="animation-delay:0.1s">
+                    <div class="ctx-label">Machine Util.</div>
+                    <div class="ctx-value">${data.util}</div>
+                    <div class="ctx-sub">${data.utilSub}</div>
+                </div>
+                <div class="glass-card ctx-card slide-up" style="animation-delay:0.15s">
+                    <div class="ctx-label">Est. Dispatch</div>
+                    <div class="ctx-value">${data.eta}</div>
+                    <div class="ctx-sub">${data.etaSub}</div>
+                </div>
+                <div class="glass-card ctx-card slide-up" style="animation-delay:0.2s; grid-column:span 2">
+                    <div class="ctx-label">RM Cost</div>
+                    <div class="ctx-value">${data.rm}</div>
+                    <div class="ctx-sub">${data.rmSub}</div>
+                </div>
+            `;
+
+            // Signals
+            document.getElementById("marketSignalsContainer").innerHTML = data.signals.map(s =>
+                `<div class="signal-row"><div class="dot ${s.c}"></div><span class="signal-text">${s.t}</span></div>`
+            ).join("");
+
+            // History
+            document.getElementById("historyContainer").innerHTML = HISTORY.map(h => {
+                const adjRate = Math.round(data.floor * (1.05 + (Math.random() * 0.15)));
+                return `<tr>
+                    <td style="color:#cbd5e1;white-space:nowrap;">${h.d}</td>
+                    <td>₹${adjRate.toLocaleString('en-IN')}</td>
+                    <td><span class="outcome-badge ${h.o === 'won' ? 'outcome-won' : 'outcome-lost'}">${h.o === 'won' ? '✓ Won' : '✗ Lost'}</span></td>
+                </tr>`;
+            }).join("");
+
+            // Pricing
+            const fmt = n => '₹' + Math.round(n).toLocaleString('en-IN');
+            document.getElementById("priceLow").textContent = fmt(data.low);
+            document.getElementById("priceHigh").textContent = fmt(data.high);
+            document.getElementById("lblFloor").textContent = fmt(data.floor);
+            document.getElementById("lblCeil").textContent = fmt(data.ceil);
+            document.getElementById("priceUnit").textContent = `per ${data.unit}`;
+
+            const range = data.ceil - data.floor;
+            const lowPct = ((data.low - data.floor) / range) * 100;
+            const highPct = ((data.high - data.floor) / range) * 100;
+            document.getElementById("barFloor").style.width = `${lowPct}%`;
+            document.getElementById("barSuggested").style.left = `${lowPct}%`;
+            document.getElementById("barSuggested").style.width = `${Math.max(highPct - lowPct, 2)}%`;
+
+            // Typewriter
+            const rElem = document.getElementById("aiReasoning");
+            rElem.textContent = '';
+            let charIdx = 0;
+            const typeInterval = setInterval(() => {
+                rElem.innerHTML = data.reasoning.substring(0, charIdx) +
+                    '<span style="display:inline-block;width:2px;height:14px;background:#818cf8;margin-left:2px;vertical-align:middle;animation:pulse 1s infinite;"></span>';
+                charIdx += 2;
+                if (charIdx > data.reasoning.length) {
+                    clearInterval(typeInterval);
+                    rElem.textContent = data.reasoning;
+                }
+            }, 10);
+
+            btn.disabled = false;
+        }
+    </script>
+
+</body>
+
+</html>

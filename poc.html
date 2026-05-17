@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quote Intelligence POC - Systematic Industries</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        slate: { 850: '#151f32', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: #f1f5f9;
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 16px;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #6366f1, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            transition: all 0.3s;
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
+        }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Custom inputs */
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 10px;
+            color: #f1f5f9;
+            font-size: 16px; /* 16px prevents iOS zoom on focus */
+            outline: none;
+            transition: all 0.2s;
+        }
+        .form-input:focus, .form-select:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+        .form-select option { background: #1e293b; }
+
+        /* Typeahead Dropdown */
+        .search-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #1e293b;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 10px;
+            margin-top: 4px;
+            max-height: 240px;
+            overflow-y: auto;
+            z-index: 50;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+            display: none;
+        }
+        .search-dropdown.active { display: block; }
+        .search-item {
+            padding: 12px 14px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+            font-size: 15px;
+            transition: background 0.15s;
+        }
+        .search-item:hover { background: rgba(99, 102, 241, 0.15); }
+        .search-item:last-child { border-bottom: none; }
+        .search-item-count { font-size: 11px; color: #94a3b8; margin-left: 8px; }
+
+        /* Animation specific */
+        .fade-in { animation: fadeIn 0.5s forwards; opacity: 0; }
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        .slide-up { animation: slideUp 0.6s forwards; opacity: 0; transform: translateY(20px); }
+        @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
+
+        /* Step loader */
+        .step-item {
+            opacity: 0.4;
+            transform: translateX(-10px);
+            transition: all 0.4s;
+        }
+        .step-item.active {
+            opacity: 1;
+            transform: translateX(0);
+            color: #10b981;
+        }
+        .step-item.done {
+            opacity: 0.8;
+            transform: translateX(0);
+            color: #94a3b8;
+        }
+        
+        /* Signal dots */
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; margin-top: 4px; }
+        .dot.green { background: #10b981; box-shadow: 0 0 8px #10b981; }
+        .dot.amber { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+        .dot.red { background: #f43f5e; box-shadow: 0 0 8px #f43f5e; }
+        .dot.blue { background: #38bdf8; box-shadow: 0 0 8px #38bdf8; }
+        
+        /* Bar chart */
+        .price-bar { height: 12px; background: rgba(255,255,255,0.08); border-radius: 6px; position: relative; }
+        .price-bar-floor { position: absolute; left: 0; height: 100%; background: rgba(244,63,94,0.3); border-radius: 6px 0 0 6px; }
+        .price-bar-suggested { position: absolute; height: 100%; background: linear-gradient(90deg, #10b981, #6366f1); border-radius: 4px; box-shadow: 0 0 12px rgba(16,185,129,0.3); transition: width 1s ease-out; }
+
+        /* Fix SVG scaling */
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased text-slate-200">
+
+    <!-- Top Navigation -->
+    <header class="border-b border-slate-800/50 backdrop-blur-md bg-slate-900/30 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                    <svg class="w-4 h-4 md:w-5 md:h-5 text-white shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-sm md:text-base font-bold text-white tracking-tight">Quote Intelligence</h1>
+                    <p class="text-[10px] md:text-[11px] text-slate-400 hidden sm:block">Systematic Industries Pvt Ltd</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] md:text-xs font-medium text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-full border border-emerald-400/20 flex items-center gap-2">
+                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></div>
+                    <span class="hidden sm:inline">AI Standby</span>
+                    <span class="sm:hidden">Ready</span>
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+        
+        <!-- LEFT COLUMN: INPUT FORM -->
+        <div class="lg:col-span-4">
+            <div class="glass-card p-5 md:p-6 lg:sticky lg:top-24">
+                <div class="mb-5 md:mb-6">
+                    <h2 class="text-base md:text-lg font-semibold text-white">New Enquiry</h2>
+                    <p class="text-xs text-slate-400 mt-1">Enter details to run AI analysis</p>
+                </div>
+                
+                <form id="enquiryForm" onsubmit="handleAnalyze(event)" class="space-y-4">
+                    <div class="relative">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Customer Name</label>
+                        <input type="text" id="custName" class="form-input" placeholder="Search customer..." autocomplete="off" oninput="handleCustomerSearch(event)" onclick="handleCustomerSearch(event)" required>
+                        <div id="custDropdown" class="search-dropdown"></div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Product Type</label>
+                        <!-- Native select for best mobile experience -->
+                        <select id="prodType" class="form-select" onchange="updateSizes()" required>
+                            <option value="">Select Product...</option>
+                            <option value="MS Wire">MS Wire</option>
+                            <option value="HC Patented Wire">HC Patented Wire</option>
+                            <option value="GI Wire">GI Wire</option>
+                            <option value="OFC Cable">OFC Cable</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Size / Grade</label>
+                        <select id="prodSize" class="form-select" required>
+                            <option value="">Select Size...</option>
+                        </select>
+                    </div>
+                    <!-- Stacked on mobile, 2 columns on tablet+ -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Quantity</label>
+                            <input type="number" id="qty" class="form-input" placeholder="e.g. 25" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Payment Terms</label>
+                            <select id="payTerms" class="form-select">
+                                <option value="Advance">Advance</option>
+                                <option value="30 Days" selected>30 Days</option>
+                                <option value="60 Days">60 Days</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="pt-4">
+                        <button type="submit" id="analyzeBtn" class="btn-primary w-full py-3 rounded-xl font-semibold text-sm text-white flex justify-center items-center gap-2">
+                            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            Analyze & Get Quote
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: RESULTS OR LOADING -->
+        <div class="lg:col-span-8 relative min-h-[450px] md:min-h-[600px]">
+            
+            <!-- Default Empty State -->
+            <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 md:p-8 glass-card">
+                <div class="w-12 h-12 md:w-16 md:h-16 shrink-0 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-4 border border-indigo-500/20">
+                    <svg class="w-6 h-6 md:w-8 md:h-8 shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg md:text-xl font-semibold text-white mb-2">Ready for Analysis</h3>
+                <p class="text-sm text-slate-400 max-w-sm px-4">Enter client details and hit Analyze to see the intelligence engine compile context, market signals, and price recommendations.</p>
+            </div>
+
+            <!-- Loading Simulation State -->
+            <div id="loadingState" class="absolute inset-0 hidden flex-col items-center justify-center p-6 md:p-8 glass-card border-indigo-500/30">
+                <div class="w-full max-w-md mx-auto">
+                    <div class="flex items-center gap-3 mb-6 md:mb-8 justify-center">
+                        <svg class="animate-spin h-6 w-6 shrink-0 text-indigo-400" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <h3 class="text-base md:text-lg font-semibold text-white">AI Processing...</h3>
+                    </div>
+                    
+                    <div class="space-y-4 text-xs md:text-sm font-medium" id="stepList">
+                        <div class="step-item flex items-center gap-3" id="step1">
+                            <span class="w-4 h-4 rounded-full border-2 border-current flex items-center justify-center shrink-0"></span>
+                            <span>Retrieving CRM history & relationship...</span>
+                        </div>
+                        <div class="step-item flex items-center gap-3" id="step2">
+                            <span class="w-4 h-4 rounded-full border-2 border-current flex items-center justify-center shrink-0"></span>
+                            <span>Checking real-time FG stock levels...</span>
+                        </div>
+                        <div class="step-item flex items-center gap-3" id="step3">
+                            <span class="w-4 h-4 rounded-full border-2 border-current flex items-center justify-center shrink-0"></span>
+                            <span>Analyzing machine capacity & utilisation...</span>
+                        </div>
+                        <div class="step-item flex items-center gap-3" id="step4">
+                            <span class="w-4 h-4 rounded-full border-2 border-current flex items-center justify-center shrink-0"></span>
+                            <span>Calculating RM baseline costs...</span>
+                        </div>
+                        <div class="step-item flex items-center gap-3" id="step5">
+                            <span class="w-4 h-4 rounded-full border-2 border-current flex items-center justify-center shrink-0"></span>
+                            <span>Synthesizing market signals...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Results State (Flex col allows changing visual order on mobile) -->
+            <div id="resultsState" class="hidden flex-col gap-6 pb-8 md:pb-12">
+                
+                <!-- 1. Price Range (ORDER FIRST ON MOBILE to reduce scrolling!) -->
+                <div class="glass-card p-6 md:p-8 slide-up order-first md:order-last border border-indigo-500/40 shadow-lg shadow-indigo-500/10">
+                    <div class="flex items-center gap-2 mb-5 md:mb-6">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0">
+                            <svg class="w-4 h-4 text-white shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-sm font-semibold text-white uppercase tracking-wide">AI Suggested Price</h3>
+                        <span class="ml-auto text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">POC MODE</span>
+                    </div>
+
+                    <div class="text-center mb-6">
+                        <div class="flex items-baseline justify-center gap-2 md:gap-3">
+                            <span class="text-3xl md:text-4xl font-extrabold gradient-text" id="priceLow">--</span>
+                            <span class="text-xl text-slate-500 font-light">—</span>
+                            <span class="text-3xl md:text-4xl font-extrabold gradient-text" id="priceHigh">--</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mt-2" id="priceUnit">per MT</p>
+                    </div>
+
+                    <div class="mb-8">
+                        <div class="price-bar">
+                            <div class="price-bar-floor" style="width: 20%" id="barFloor"></div>
+                            <div class="price-bar-suggested" style="left: 20%; width: 40%" id="barSuggested"></div>
+                        </div>
+                        <div class="flex justify-between mt-2 text-xs">
+                            <div class="text-left text-rose-400">Floor: <span id="lblFloor"></span></div>
+                            <div class="text-right text-slate-400">Ceiling: <span id="lblCeil"></span></div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-slate-900/50 border border-slate-700/50">
+                        <p class="text-sm text-slate-300 leading-relaxed" id="aiReasoning"></p>
+                    </div>
+                </div>
+
+                <!-- 2. Context Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 order-2" id="contextCardsContainer">
+                    <!-- Populated via JS -->
+                </div>
+
+                <!-- 3. Signals and History -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 order-3">
+                    <!-- Market Signals -->
+                    <div class="glass-card p-5 md:p-6 slide-up">
+                        <div class="flex items-center gap-2 mb-4">
+                            <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                            </svg>
+                            <h3 class="text-sm font-semibold text-white uppercase tracking-wide">Market Signals</h3>
+                        </div>
+                        <div class="space-y-3" id="marketSignalsContainer">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Quote History -->
+                    <div class="glass-card p-5 md:p-6 slide-up">
+                        <div class="flex items-center gap-2 mb-4">
+                            <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <h3 class="text-sm font-semibold text-white uppercase tracking-wide">Recent History</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left min-w-[280px]">
+                                <thead>
+                                    <tr class="text-slate-400 border-b border-slate-700/50">
+                                        <th class="pb-2 font-medium">Date</th>
+                                        <th class="pb-2 font-medium text-right">Rate</th>
+                                        <th class="pb-2 font-medium text-center">Outcome</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyContainer">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- POC LOGIC -->
+    <script>
+        // --- Dummy Customers for Typeahead ---
+        const CUSTOMERS = [
+            { name: "KEI Industries Ltd.", orders: 12, type: "Repeat" },
+            { name: "Polycab India Ltd.", orders: 28, type: "Repeat" },
+            { name: "Diamond Power Infrastructure Ltd", orders: 4, type: "Repeat" },
+            { name: "Fort Gloster Industries Ltd", orders: 2, type: "Repeat" },
+            { name: "Shree Hanuman Tubes Pvt Ltd", orders: 0, type: "New" },
+            { name: "Maccaferri Environmental Solutions", orders: 6, type: "Repeat" },
+            { name: "TRANSRAIL LIGHTING LTD", orders: 9, type: "Repeat" },
+            { name: "Chandresh Cables Ltd", orders: 15, type: "Repeat" },
+            { name: "Nirmal Networks", orders: 0, type: "New" },
+            { name: "Cisfiber Infra Solution", orders: 0, type: "New" },
+            { name: "Ascent Networks Pvt Ltd", orders: 3, type: "Repeat" },
+            { name: "Al Ma Cabrol FZC LLC", orders: 11, type: "Repeat" },
+            { name: "A-1 Fence Products Company", orders: 7, type: "Repeat" },
+            { name: "Sterlite Technologies Ltd", orders: 0, type: "New" },
+            { name: "V-Guard Industries Ltd", orders: 0, type: "New" }
+        ];
+
+        let selectedCustomer = null;
+
+        // --- Typeahead Logic ---
+        function handleCustomerSearch(e) {
+            const val = e.target.value.toLowerCase();
+            const dropdown = document.getElementById('custDropdown');
+            dropdown.innerHTML = '';
+            
+            const matches = CUSTOMERS.filter(c => c.name.toLowerCase().includes(val));
+            
+            if (matches.length > 0) {
+                matches.forEach(c => {
+                    const div = document.createElement('div');
+                    div.className = 'search-item flex items-center justify-between';
+                    div.innerHTML = `<span>${c.name}</span><span class="search-item-count">${c.orders > 0 ? c.orders + ' orders' : 'New Client'}</span>`;
+                    div.onclick = () => {
+                        document.getElementById('custName').value = c.name;
+                        selectedCustomer = c;
+                        dropdown.classList.remove('active');
+                    };
+                    dropdown.appendChild(div);
+                });
+                dropdown.classList.add('active');
+            } else {
+                dropdown.classList.remove('active');
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('custDropdown');
+            const input = document.getElementById('custName');
+            if (!dropdown.contains(e.target) && e.target !== input) {
+                dropdown.classList.remove('active');
+            }
+        });
+
+        // --- Dependent Dropdown Logic ---
+        function updateSizes() {
+            const p = document.getElementById("prodType").value;
+            const s = document.getElementById("prodSize");
+            if (p === "HC Patented Wire") { s.innerHTML = '<option value="5.10 MM">5.10 MM</option><option value="4.90 MM">4.90 MM</option>'; }
+            else if (p === "GI Wire") { s.innerHTML = '<option value="1.25 MM IS">1.25 MM IS</option><option value="0.90 MM IS">0.90 MM IS</option>'; }
+            else if (p === "OFC Cable") { s.innerHTML = '<option value="2F 4.5mm FRP">2F 4.5mm FRP</option><option value="6F 5.8mm FRP">6F 5.8mm FRP</option>'; }
+            else { s.innerHTML = '<option value="2.62 MM">2.62 MM</option><option value="1.38 MM">1.38 MM</option><option value="5.58 MM">5.58 MM</option>'; }
+        }
+
+        // --- 15 AI Commentaries (Dynamic Dummy Data Engine) ---
+        const COMMENTARIES = [
+            "Given their status as a high-volume loyal customer, prioritizing this order makes sense. We have partial stock ready to dispatch. The suggested range keeps margins intact while honoring their preferred pricing tier.",
+            "This is a massive strategic account. With zero FG stock available and tight machine capacity, we should price near the ceiling to cover the expedited production costs without losing the bid.",
+            "They are a new client in a highly competitive segment. I recommend quoting near the floor price (₹{floor}) to capture market share and secure the initial relationship.",
+            "This customer is extremely price-sensitive and frequently compares quotes. Given we have full stock ready for immediate dispatch, we can justify a slight premium over the floor while remaining competitive.",
+            "Export order detected. The logistics overhead is higher, but so is their willingness to pay. Current RM base is steady. Suggest aiming for the higher end of the range to maximize margin.",
+            "A mid-volume repeat client. They value our quality over rock-bottom prices. We have a production window opening next week. The suggested mid-range price perfectly balances margin with our operational schedule.",
+            "Telecom sector client. OFC demand is currently surging. Since our OFC lines are running at 85% utilization, we should price at a premium (₹{high}) to manage the backlog.",
+            "This is a low-volume, high-maintenance order. Our capacity is currently free on the required machines, but we should not discount heavily. Suggest standard pricing.",
+            "First-time order from a major brand. To win this, we need to be aggressive. Quoting at ₹{low} gives us a foot in the door with a 6% margin above RM and conversion costs.",
+            "Project-based client requiring stringent quality checks. The conversion cost for this grade is higher than normal. The suggested price factors in a 2% buffer for testing and QA overhead.",
+            "Steady, reliable customer. They rarely negotiate if the price is fair. We can dispatch 50% immediately and the rest next week. The suggested rate reflects a standard 12% margin.",
+            "This client has a history of lost quotes due to our pricing being too high. We need to tighten the margin this time. Quoting at ₹{low} gives us a strong chance to win the business back.",
+            "Fencing sector client. This product has high market availability, so pricing power is low. We must remain close to the market average to secure the deal.",
+            "Premium quality segment. They specify top-tier raw materials. With TATA Steel RM costs at a premium, the absolute floor is ₹{floor}. Quote at ₹{high} to maintain profitability.",
+            "A standard enquiry with no special requirements. Stock is adequate. The suggested range provides a comfortable 10-15% margin above our base cost. Advise closing quickly."
+        ];
+
+        // Engine to generate consistent data based on selections
+        function generateDashboardData(client, prodType, size) {
+            // Pseudo-random generation based on names
+            const hash = (client.name.length + prodType.length) % 15;
+            
+            // Baseline variables
+            let unit = prodType === "OFC Cable" ? "KME" : (prodType === "HC Patented Wire" ? "MTS" : "MT");
+            let rmCost = 53000;
+            let conversion = 3000;
+            
+            if (prodType === "HC Patented Wire") { rmCost = 67000; conversion = 4500; }
+            if (prodType === "GI Wire") { rmCost = 53500; conversion = 5500; }
+            if (prodType === "OFC Cable") { rmCost = 3000; conversion = 800; }
+
+            const floor = rmCost + conversion;
+            const marketCeil = floor * 1.25;
+            const low = floor * 1.08;
+            const high = floor * 1.15;
+
+            // Commentary template replacement
+            let reasoningText = COMMENTARIES[hash];
+            reasoningText = reasoningText.replace("{floor}", floor.toLocaleString('en-IN'));
+            reasoningText = reasoningText.replace("{low}", low.toLocaleString('en-IN'));
+            reasoningText = reasoningText.replace("{high}", high.toLocaleString('en-IN'));
+
+            return {
+                custStr: `${client.type} Client`,
+                custSub: client.orders > 0 ? `${client.orders} past orders` : "First-time enquiry",
+                stock: hash % 3 === 0 ? "0.0 " + unit : (hash % 3 === 1 ? "12.5 " + unit : "45.0 " + unit),
+                stockSub: hash % 3 === 0 ? "Full production required" : "Ready to dispatch now",
+                util: (60 + (hash * 2)) + "%",
+                utilSub: hash % 3 === 0 ? "Heavy Load - Expect delays" : "Manageable capacity",
+                eta: hash % 3 === 0 ? "8 Days" : "2 Days",
+                etaSub: hash % 3 === 0 ? "Production schedule + transit" : "In stock, ready for logistics",
+                rm: `₹${rmCost.toLocaleString('en-IN')}/${unit}`,
+                rmSub: prodType === "HC Patented Wire" ? "TATA Steel — HC72B" : "Rashmi Metallurgical",
+                low: low, high: high, floor: floor, ceil: marketCeil, unit: unit,
+                signals: [
+                    { c: hash % 3 === 0 ? "red" : "green", t: hash % 3 === 0 ? "Zero FG stock available — full production run required" : `Full stock of ${size} ready for immediate dispatch` },
+                    { c: client.type === "Repeat" ? "green" : "blue", t: client.type === "Repeat" ? `Strong relationship: ${client.orders} successful past orders` : "New customer — using market baseline pricing" },
+                    { c: "amber", t: `Market rate range (last 30 days): ₹${Math.round(low*0.95).toLocaleString('en-IN')} – ₹${Math.round(marketCeil).toLocaleString('en-IN')}` }
+                ],
+                reasoning: reasoningText
+            };
+        }
+
+        const HISTORY = [
+            { d: "10-May-2026", r: "62,500", o: "won" },
+            { d: "02-May-2026", r: "64,100", o: "lost" },
+            { d: "28-Apr-2026", r: "61,800", o: "won" },
+            { d: "15-Apr-2026", r: "63,000", o: "won" },
+            { d: "01-Apr-2026", r: "65,200", o: "lost" }
+        ];
+
+        async function handleAnalyze(e) {
+            e.preventDefault();
+            
+            // Validation
+            const custInput = document.getElementById("custName").value;
+            const prodType = document.getElementById("prodType").value;
+            const size = document.getElementById("prodSize").value;
+            
+            if(!custInput || !prodType || !size) {
+                alert("Please select customer and product details first.");
+                return;
+            }
+
+            // Fallback if user typed a name but didn't click dropdown
+            if (!selectedCustomer || selectedCustomer.name !== custInput) {
+                const match = CUSTOMERS.find(c => c.name.toLowerCase() === custInput.toLowerCase());
+                selectedCustomer = match || { name: custInput, orders: 0, type: "New" };
+            }
+
+            const btn = document.getElementById("analyzeBtn");
+            const empty = document.getElementById("emptyState");
+            const loading = document.getElementById("loadingState");
+            const results = document.getElementById("resultsState");
+            
+            // UI State
+            btn.disabled = true;
+            empty.classList.add("hidden");
+            results.classList.add("hidden");
+            loading.classList.remove("hidden");
+            loading.classList.add("flex");
+
+            // Reset steps
+            const steps = [1, 2, 3, 4, 5].map(i => document.getElementById(`step${i}`));
+            steps.forEach(s => { s.className = "step-item flex items-center gap-3"; s.children[0].innerHTML = ""; });
+
+            // Simulate AI logic timing
+            for (let i = 0; i < steps.length; i++) {
+                steps[i].classList.add("active");
+                await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
+                steps[i].classList.remove("active");
+                steps[i].classList.add("done");
+                steps[i].children[0].innerHTML = "✓";
+            }
+
+            await new Promise(r => setTimeout(r, 400));
+
+            // Hide loading, show results
+            loading.classList.remove("flex");
+            loading.classList.add("hidden");
+            results.classList.remove("hidden");
+            // Set flex explicitly when showing to override Tailwind "hidden" completely
+            results.style.display = "flex"; 
+
+            // Generate and Populate Data
+            const data = generateDashboardData(selectedCustomer, prodType, size);
+            
+            // Cards
+            document.getElementById("contextCardsContainer").innerHTML = `
+                <div class="glass-card p-3 md:p-4 slide-up col-span-2 sm:col-span-1 md:col-span-1">
+                    <p class="text-[10px] text-slate-400 uppercase mb-0.5 md:mb-1">Customer</p>
+                    <p class="text-base md:text-lg font-bold truncate">${data.custStr}</p>
+                    <p class="text-[10px] md:text-xs text-slate-400 mt-1">${data.custSub}</p>
+                </div>
+                <div class="glass-card p-3 md:p-4 slide-up col-span-1" style="animation-delay: 0.05s">
+                    <p class="text-[10px] text-slate-400 uppercase mb-0.5 md:mb-1">FG Stock</p>
+                    <p class="text-base md:text-lg font-bold">${data.stock}</p>
+                    <p class="text-[10px] md:text-xs text-slate-400 mt-1 line-clamp-1">${data.stockSub}</p>
+                </div>
+                <div class="glass-card p-3 md:p-4 slide-up col-span-1" style="animation-delay: 0.1s">
+                    <p class="text-[10px] text-slate-400 uppercase mb-0.5 md:mb-1">Machine Util.</p>
+                    <p class="text-base md:text-lg font-bold">${data.util}</p>
+                    <p class="text-[10px] md:text-xs text-slate-400 mt-1 line-clamp-1">${data.utilSub}</p>
+                </div>
+                <div class="glass-card p-3 md:p-4 slide-up col-span-1" style="animation-delay: 0.15s">
+                    <p class="text-[10px] text-slate-400 uppercase mb-0.5 md:mb-1">Est. Dispatch</p>
+                    <p class="text-base md:text-lg font-bold">${data.eta}</p>
+                    <p class="text-[10px] md:text-xs text-slate-400 mt-1 line-clamp-1">${data.etaSub}</p>
+                </div>
+                <div class="glass-card p-3 md:p-4 slide-up col-span-2 md:col-span-1" style="animation-delay: 0.2s">
+                    <p class="text-[10px] text-slate-400 uppercase mb-0.5 md:mb-1">RM Cost</p>
+                    <p class="text-base md:text-lg font-bold">${data.rm}</p>
+                    <p class="text-[10px] md:text-xs text-slate-400 mt-1 line-clamp-1">${data.rmSub}</p>
+                </div>
+            `;
+
+            // Signals
+            document.getElementById("marketSignalsContainer").innerHTML = data.signals.map(s => 
+                `<div class="flex items-start gap-3"><div class="dot ${s.c}"></div><p class="text-[11px] md:text-xs text-slate-300 leading-relaxed">${s.t}</p></div>`
+            ).join("");
+
+            // History - adjust rates slightly based on base cost to look real
+            document.getElementById("historyContainer").innerHTML = HISTORY.map((h, i) => {
+                const adjRate = Math.round(data.floor * (1.05 + (Math.random() * 0.15)));
+                return `
+                <tr class="${i !== 4 ? 'border-b border-slate-700/30' : ''}">
+                    <td class="py-2 text-slate-300 whitespace-nowrap">${h.d}</td>
+                    <td class="py-2 text-right text-white font-medium">₹${adjRate.toLocaleString('en-IN')}</td>
+                    <td class="py-2 text-center whitespace-nowrap">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-medium border ${h.o === 'won' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'}">
+                            ${h.o === 'won' ? '✓ Won' : '✗ Lost'}
+                        </span>
+                    </td>
+                </tr>
+            `}).join("");
+
+            // Pricing
+            const fmt = n => '₹' + Math.round(n).toLocaleString('en-IN');
+            document.getElementById("priceLow").innerText = fmt(data.low);
+            document.getElementById("priceHigh").innerText = fmt(data.high);
+            document.getElementById("lblFloor").innerText = fmt(data.floor);
+            document.getElementById("lblCeil").innerText = fmt(data.ceil);
+            document.getElementById("priceUnit").innerText = `per ${data.unit}`;
+            
+            // Bar Width logic
+            const range = data.ceil - data.floor;
+            const lowPct = ((data.low - data.floor) / range) * 100;
+            const highPct = ((data.high - data.floor) / range) * 100;
+            
+            document.getElementById("barFloor").style.width = `${lowPct}%`;
+            document.getElementById("barSuggested").style.left = `${lowPct}%`;
+            document.getElementById("barSuggested").style.width = `${Math.max(highPct - lowPct, 2)}%`;
+
+            // Reasoning typewriter effect
+            const rElem = document.getElementById("aiReasoning");
+            rElem.innerHTML = '';
+            let charIdx = 0;
+            const typeInterval = setInterval(() => {
+                rElem.innerHTML = data.reasoning.substring(0, charIdx) + '<span class="inline-block w-1 h-3 md:h-4 bg-indigo-400 ml-1 animate-pulse align-middle"></span>';
+                charIdx += 2;
+                if (charIdx > data.reasoning.length) {
+                    clearInterval(typeInterval);
+                    rElem.innerHTML = data.reasoning;
+                }
+            }, 10);
+
+            // Reset btn
+            btn.disabled = false;
+        }
+    </script>
+</body>
+</html>

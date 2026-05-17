@@ -1,0 +1,30 @@
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+*.db
+*.sqlite3
+
+# Node
+node_modules/
+dist/
+build/
+.npm/
+
+# Data files
+*.xls
+*.xlsx
+*.csv
+*.json
+
+# specific files that might contain secrets or large data
+erp_data/
+mcp_args.json
