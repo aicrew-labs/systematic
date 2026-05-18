@@ -28,6 +28,3 @@ build/
 # specific files that might contain secrets or large data
 erp_data/
 mcp_args.json
-
-# Shared AI Chat Sync Folder (OneDrive handled, Git ignored)
-docs/ai-context/shared-chats/
