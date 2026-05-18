@@ -164,10 +164,57 @@ detect_latest_chat() {
     fi
 }
 
+# Function: Automatically install Git hooks for background automation
+install_git_hooks() {
+    local hooks_dir="$PROJECT_DIR/.git/hooks"
+    if [ -d "$hooks_dir" ]; then
+        # 1. post-merge hook (runs after git pull/merge)
+        post_merge_hook="$hooks_dir/post-merge"
+        cat << 'EOF' > "$post_merge_hook"
+#!/bin/bash
+# Automatically sync shared chats after a git pull / merge
+echo "🔄 Git post-merge: Syncing incoming AI chats from OneDrive..."
+"./docs/ai-context/share-chat.sh" --sync 2>/dev/null
+EOF
+        chmod +x "$post_merge_hook"
+
+        # 2. pre-push hook (runs before git push)
+        pre_push_hook="$hooks_dir/pre-push"
+        cat << 'EOF' > "$pre_push_hook"
+#!/bin/bash
+# Automatically detect and share the latest active chat before pushing code
+LOCAL_APP_DIR="$HOME/.gemini/antigravity"
+latest_pb=""
+latest_time=0
+
+for f in "$LOCAL_APP_DIR/conversations"/*.pb; do
+    if [ -f "$f" ] && [ ! -L "$f" ]; then
+        mtime=$(stat -f "%m" "$f" 2>/dev/null || stat -c "%Y" "$f")
+        if [ "$mtime" -gt "$latest_time" ]; then
+            latest_time=$mtime
+            latest_pb=$f
+        fi
+    fi
+done
+
+if [ -n "$latest_pb" ]; then
+    chat_id=$(basename "$latest_pb" .pb)
+    echo "🔄 Git pre-push: Automatically sharing latest active AI chat ($chat_id)..."
+    "./docs/ai-context/share-chat.sh" "$chat_id" >/dev/null 2>&1
+fi
+EOF
+        chmod +x "$pre_push_hook"
+        echo "🔧 Git hooks installed/updated successfully (post-merge & pre-push)!"
+    fi
+}
+
 # Main routing logic
 if [ "$1" == "--sync" ] || [ -z "$1" ]; then
     # Default behavior: Sync any incoming shared chats first
     sync_incoming
+    
+    # Automatically install/update local hooks
+    install_git_hooks
     
     # If explicitly syncing, stop here
     if [ "$1" == "--sync" ]; then
@@ -180,4 +227,5 @@ if [ "$1" == "--sync" ] || [ -z "$1" ]; then
 elif [ -n "$1" ]; then
     # Share a specific chat ID passed as argument
     share_chat_id "$1"
+    install_git_hooks
 fi
