@@ -12,32 +12,34 @@ Quote Intelligence is a real-time, data-driven pricing and quote suggestion syst
 
 ## 🗺️ Shared Roadmap & Current Checklist
 
-- `[x]` **Core ERP Database Schema:** Models for `Customer`, `Product`, `QuoteHistory`, `FGInventory`, `Machine`, and `RMPrice` defined in SQLAlchemy.
-- `[x]` **Quote Intelligence Backend Engine:** `backend/app/services/quote_engine.py` complete with cost floor, conversion costs, machine drawing utilisation check, FG stock availability, and outcome analysis.
-- `[x]` **Daily RM Rates Backend API:** API endpoints to get and set current daily steel and zinc prices.
-- `[x]` **Daily Rates Frontend Modal:** `DailyRatesModal.jsx` component completed in React, connected to API client for setting dynamic rates in the database.
-- `[ ]` **Trigger Daily Rates Modal:** Connect the modal to the main dashboard's configuration/settings trigger.
-- `[ ]` **Frontend Quoting Form Integration:** Connect the React frontend form inputs to the FastAPI quote engine endpoint.
-- `[ ]` **Replace Stubbed AI Reasoning with Live Claude API:** Integrate actual Anthropic Claude API for reasoning generation in `quote_engine.py` (currently using sophisticated mock-context generation).
-- `[ ]` **End-to-End Dynamic Cost Flow Testing:** Validate that updating RM Rates in the frontend immediately shifts the generated suggested pricing range for new quotes.
+- `[x]` **Core ERP Database Schema:** Migrated 599 customers, 1,145 enquiries, and FG inventory to Supabase PostgreSQL.
+- `[x]` **Quote Intelligence Backend Engine:** `backend/supabase_etl.py` built for syncing ERP data to Supabase.
+- `[x]` **Dashboard Integration:** Connected `poc_mobile.html` directly to Supabase JS client to pull live market signals, machine utilization, and history dynamically.
+- `[x]` **Cloud Infrastructure:** Configured and deployed to Railway, serving the FastAPI backend and static HTML frontend under one unified domain.
+- `[ ]` **Daily Rates Editor:** Build a UI in the live dashboard to allow the admin to update Daily RM Rates and write them back to Supabase.
+- `[ ]` **Replace Stubbed AI Reasoning with Live Claude API:** Integrate actual Anthropic Claude API for reasoning generation in the pricing engine.
+- `[ ]` **Auth & Security:** Transition dashboard from `anon` public access to Row Level Security (RLS) authenticated user access.
 
 ---
 
 ## 💻 Tech Stack & Architecture
-* **Backend:** FastAPI + SQLAlchemy (SQLite/PostgreSQL database)
-* **Frontend:** Vite + React + Tailwind CSS
-* **Intelligence Layer:** Rule-based cost heuristics + Claude API reasoning (currently stubbed)
-* **Hosting/Deploy:** Netlify (for frontend) and production FastAPI hosting
+* **Backend:** FastAPI + Python (ETL and proxy)
+* **Database:** Supabase (PostgreSQL) + `supabase-js`
+* **Frontend:** HTML5 + Vanilla JS + Tailwind CSS (`poc_mobile.html` served as `static/index.html`)
+* **Hosting/Deploy:** Railway (via Nixpacks) connected to GitHub
+* **Intelligence Layer:** Rule-based cost heuristics (Claude API reasoning pending)
 
 ---
 
 ## 📢 Last Handoff & Where We Left Off
 
 ### Status of Last Session (2026-05-18):
-- Completed the core infrastructure for Method B (Git-Based AI Context Sync).
-- Created `docs/ai-context/README.md` to guide future AI agents.
-- Initialized `docs/ai-context/active_task.md` (this file) with the exact state of the backend quote suggestion engine and the frontend `DailyRatesModal`.
-- **Ready for Next Developer:** The project is primed to wire the `DailyRatesModal` trigger button on the dashboard, connect the React quoting form to the backend pricing engine, or configure the Claude API key for live AI quote reasoning.
+- **Massive Milestone:** Fully migrated the local Quote Intelligence POC to a production-ready cloud architecture.
+- Pushed the entire ERP dataset into a live Supabase project.
+- Connected the mobile dashboard to fetch live data asynchronously from Supabase.
+- Connected the GitHub repository (`aicrew-labs/systematic`) to Railway for automatic CI/CD deployments.
+- Fixed Railway Nixpacks build issues by reorganizing `requirements.txt` to the root directory.
+- **Ready for Next Developer:** The live dashboard is up! The next primary task is allowing the admin to update today's steel and zinc prices directly from the dashboard UI, and refining the AI commentary engine.
 
 ---
 
