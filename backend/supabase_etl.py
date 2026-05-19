@@ -52,6 +52,15 @@ def upsert_batch(table: str, rows: list, batch_size: int = 200, on_conflict: str
     print(f"  ✅ {table}: {total} rows inserted.          ")
 
 
+def clear_table(table: str):
+    """Delete all rows in a table to ensure clean seeding."""
+    try:
+        sb.table(table).delete().neq("id", -1).execute()
+        print(f"  🧹 Cleared {table} successfully.")
+    except Exception as e:
+        print(f"  ⚠️  Could not clear table {table}: {e}")
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. PRODUCTS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -383,6 +392,15 @@ if __name__ == "__main__":
     print("🚀 Quote Intelligence — Supabase ETL Loader")
     print(f"   Project: {SUPABASE_URL}")
     print("=" * 60)
+
+    # Clear all tables to avoid duplicates (except customers which upserts correctly by name conflict)
+    clear_table("products")
+    clear_table("rm_prices")
+    clear_table("machines")
+    clear_table("fg_inventory")
+    clear_table("enquiries")
+    clear_table("quote_history")
+    clear_table("daily_rates")
 
     seed_products()
     seed_customers()
