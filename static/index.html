@@ -474,42 +474,61 @@
                 </div>
 
                 <!-- 3. Signals and History -->
-                <div class="signals-history-grid">
-                    <!-- Market Signals -->
-                    <div class="glass-card p-5 slide-up">
-                        <div class="flex items-center gap-2 mb-4">
-                            <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mt-4 lg:mt-6">
+                    <div class="glass-panel p-4 lg:p-6 pb-2">
+                        <div class="flex items-center space-x-2 text-slate-300 mb-4">
+                            <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                             </svg>
-                            <h3 class="text-sm font-semibold text-white uppercase tracking-wide">Market Signals</h3>
+                            <h3 class="font-bold tracking-wider uppercase text-sm">Market Signals</h3>
                         </div>
-                        <div class="space-y-3" id="marketSignalsContainer">
-                            <!-- Populated via JS -->
-                        </div>
+                        <div id="marketSignalsContainer" class="space-y-3"></div>
                     </div>
 
-                    <!-- Quote History -->
-                    <div class="glass-card p-5 slide-up">
-                        <div class="flex items-center gap-2 mb-4">
-                            <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <div class="glass-panel p-4 lg:p-6 pb-2">
+                        <div class="flex items-center space-x-2 text-slate-300 mb-4">
+                            <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
-                            <h3 class="text-sm font-semibold text-white uppercase tracking-wide">Recent History</h3>
+                            <h3 class="font-bold tracking-wider uppercase text-sm">Market History (This Product)</h3>
                         </div>
-                        <div class="table-scroll">
-                            <table class="w-full text-xs text-left" style="min-width: 260px">
-                                <thead>
-                                    <tr class="text-slate-400 border-b border-slate-700/50">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left">
+                                <thead class="text-slate-400 border-b border-slate-700/50">
+                                    <tr>
                                         <th class="pb-2 font-medium">Date</th>
+                                        <th class="pb-2 font-medium">Customer</th>
                                         <th class="pb-2 font-medium text-right">Rate</th>
-                                        <th class="pb-2 font-medium text-center">Outcome</th>
+                                        <th class="pb-2 font-medium text-right">Outcome</th>
                                     </tr>
                                 </thead>
-                                <tbody id="historyContainer">
-                                    <!-- Populated via JS -->
+                                <tbody id="historyTable" class="divide-y divide-slate-700/50">
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-4 lg:p-6 mt-4 lg:mt-6">
+                    <div class="flex items-center space-x-2 text-slate-300 mb-4">
+                        <svg class="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                        <h3 class="font-bold tracking-wider uppercase text-sm">Customer History (All Products)</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left">
+                            <thead class="text-slate-400 border-b border-slate-700/50">
+                                <tr>
+                                    <th class="pb-2 font-medium">Date</th>
+                                    <th class="pb-2 font-medium">Product</th>
+                                    <th class="pb-2 font-medium text-right">Rate</th>
+                                    <th class="pb-2 font-medium text-right">Outcome</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customerHistoryTable" class="divide-y divide-slate-700/50">
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -613,25 +632,6 @@
             }
         }
 
-        // ── Commentaries ─────────────────────────────────────────────────────────
-        const COMMENTARIES = [
-            "Given their status as a high-volume loyal customer, prioritizing this order makes sense. We have partial stock ready to dispatch. The suggested range keeps margins intact while honoring their preferred pricing tier.",
-            "This is a massive strategic account. With zero FG stock available and tight machine capacity, we should price near the ceiling to cover the expedited production costs without losing the bid.",
-            "This is a new client in a highly competitive segment. I recommend quoting near the floor price to capture market share and secure the initial relationship.",
-            "This customer frequently compares quotes. Given we have full stock ready for immediate dispatch, we can justify a slight premium while remaining competitive.",
-            "Export order detected. The logistics overhead is higher, but so is their willingness to pay. Current RM base is steady. Suggest aiming for the higher end of the range to maximize margin.",
-            "A mid-volume repeat client. They value our quality over rock-bottom prices. The suggested mid-range price perfectly balances margin with our operational schedule.",
-            "OFC demand is currently surging. Since our OFC lines are running at high utilization, we should price at a premium to manage the backlog.",
-            "This is a low-volume order. Our capacity is currently free on the required machines, but we should not discount heavily. Suggest standard pricing.",
-            "First-time order from a major brand. To win this, we need to be aggressive. Quoting at the floor gives us a foot in the door with a healthy margin above RM and conversion costs.",
-            "Project-based client requiring stringent quality checks. The conversion cost for this grade is higher than normal. The suggested price factors in a 2% buffer for testing and QA overhead.",
-            "Steady, reliable customer. They rarely negotiate if the price is fair. The suggested rate reflects a standard 12% margin above our floor cost.",
-            "This client has a history of lost quotes due to our pricing being too high. We need to tighten the margin this time to win the business back.",
-            "Fencing sector client. This product has high market availability, so pricing power is low. We must remain close to the market average to secure the deal.",
-            "Premium quality segment. With current RM costs at elevated levels, the floor is firm. Quote near the high end to maintain profitability.",
-            "A standard enquiry with no special requirements. Stock is adequate. The suggested range provides a comfortable 10-15% margin above our base cost."
-        ];
-
         // ── Mobile form collapse ──────────────────────────────────────────────────
         function toggleForm() {
             const inner = document.getElementById('formInner');
@@ -678,17 +678,22 @@
 
             // ── Step 1: CRM History ───────────────────────────────────────────────
             steps[0].classList.add('active');
-            const [histRes, custEnqRes] = await Promise.all([
+            const [histRes, custEnqRes, custHistRes] = await Promise.all([
                 sb.from('quote_history')
-                    .select('quote_date,unit_rate_inr,outcome,quantity,unit')
+                    .select('quote_date,unit_rate_inr,outcome,quantity,unit,customer_name')
                     .eq('product_type', prodType)
                     .ilike('size_label', `%${size.split(' ')[0]}%`)
                     .order('quote_date', { ascending: false })
-                    .limit(10),
+                    .limit(20),
                 sb.from('enquiries')
                     .select('id')
                     .ilike('customer_name', `%${custInput.split(' ')[0]}%`)
-                    .limit(1)
+                    .limit(1),
+                sb.from('quote_history')
+                    .select('quote_date,unit_rate_inr,outcome,product_type,size_label,customer_name')
+                    .ilike('customer_name', `%${custInput.split(' ')[0]}%`)
+                    .order('quote_date', { ascending: false })
+                    .limit(20)
             ]);
             await new Promise(r => setTimeout(r, 500));
             steps[0].classList.replace('active','done'); steps[0].children[0].innerHTML = '✓';
@@ -790,13 +795,35 @@
             const custStr    = isRepeat ? 'Repeat Customer' : 'New Customer';
             const custSub    = orderCount>0 ? `${orderCount} past orders on record` : 'First-time enquiry';
 
-            // Commentary
-            const hash = (custInput.length + prodType.length) % 15;
-            const reasoning = COMMENTARIES[hash];
+            // ── Call AerialEngine AI ─────────────────────────────────────────────
+            let reasoning = "Analyzing historical context and current market conditions...";
+            try {
+                const aiRes = await fetch('/api/v1/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_id: selectedCustomer.customer_id || selectedCustomer.cliid || custInput,
+                        customer_name: selectedCustomer.name || selectedCustomer.cliname || custInput,
+                        product_type: prodType,
+                        product_code: size,
+                        quantity_mt: qty
+                    })
+                });
+                if (aiRes.ok) {
+                    const aiData = await aiRes.json();
+                    reasoning = aiData.pricing_logic_explanation;
+                } else {
+                    reasoning = "AerialEngine is currently analyzing the market. (API Error)";
+                }
+            } catch (err) {
+                console.error("AerialEngine Error:", err);
+                reasoning = "AerialEngine offline. Using standard pricing heuristic.";
+            }
 
             // Market signals
             const marketHigh = histRates.length ? Math.round(Math.max(...histRates)) : Math.round(ceil);
             const marketLow  = histRates.length ? Math.round(Math.min(...histRates.filter(r=>r>floor))) : Math.round(floor*1.05);
+            
             const signals = [
                 { c: totalFG>0?'green':'red',   t: totalFG>0 ? `${totalFG.toFixed(1)} ${unit} of ${size} ready for immediate dispatch` : `No FG stock available for ${size} — full production run required` },
                 { c: isRepeat?'green':'blue',    t: isRepeat ? `Strong relationship: ${orderCount} successful past orders` : 'New customer — using market baseline pricing' },

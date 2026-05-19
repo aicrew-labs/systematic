@@ -1,12 +1,13 @@
 from app.schemas import QuoteRequest, QuoteResponse
 from app.database import get_daily_rates, get_historical_invoices, get_historical_enquiries, CUSTOMERS
+from app.aerial_engine import AerialEngine
 import random
 
 def get_customer_name(customer_id: str) -> str:
     for c in CUSTOMERS:
         if str(c.get("cliid", "")) == str(customer_id):
             return c.get("cliname", "")
-    return ""
+    return customer_id
 
 def calculate_quote(request: QuoteRequest) -> QuoteResponse:
     rates = get_daily_rates()
@@ -37,7 +38,7 @@ def calculate_quote(request: QuoteRequest) -> QuoteResponse:
     target_price_mt = floor_price_mt * 1.05
     
     # 2. Historical Data Context
-    cust_name = get_customer_name(request.customer_id)
+    cust_name = request.customer_name or get_customer_name(request.customer_id)
     invoices = get_historical_invoices(customer_name=cust_name, product_code=request.product_code)
     enquiries = get_historical_enquiries(customer_id=request.customer_id)
     
@@ -64,17 +65,35 @@ def calculate_quote(request: QuoteRequest) -> QuoteResponse:
     # Since status on enquiries isn't perfectly mapped, we mock a win rate
     win_rate = min(len(invoices) / max(len(enquiries), 1), 1.0) * 100 if enquiries else 0.0
     
-    # 3. Market Signals & Recommendation
-    # Determine recommendation based on historical + floor
-    market_signal = "Neutral"
+    # 3. Market Signals & Recommendation via AerialEngine
+    
+    # Calculate total orders to determine repeat customer
+    all_invoices = get_historical_invoices(customer_name=cust_name)
+    total_orders = len(all_invoices)
+    customer_stats = {
+        "name": cust_name,
+        "is_repeat": total_orders > 0,
+        "total_orders": total_orders
+    }
+    
+    request_data = {
+        "product_type": request.product_type,
+        "product_code": request.product_code
+    }
+    
+    math_context = {
+        "floor_price_mt": floor_price_mt,
+        "target_price_mt": target_price_mt,
+        "historical_avg_price": avg_historical
+    }
+    
     if avg_historical and avg_historical > target_price_mt:
         recommended = avg_historical
-        market_signal = "High Demand - Client historically pays well above target."
-        logic = f"Client's historical average (₹{avg_historical:,.2f}) is higher than our Target Price (₹{target_price_mt:,.2f}). We recommend sticking close to their historical rate to maximize margin."
     else:
         recommended = target_price_mt
-        market_signal = "Competitive Pricing Needed"
-        logic = f"Target price based on today's RM rates is ₹{target_price_mt:,.2f}. Client has no strong high-price history for this item, recommending standard target."
+        
+    logic = AerialEngine.generate_reasoning(request_data, math_context, customer_stats)
+    market_signal = "AI Generated Pricing"
 
     return QuoteResponse(
         base_cost_mt=base_cost_mt,

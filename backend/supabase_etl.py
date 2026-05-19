@@ -35,7 +35,7 @@ def load_json(filename):
         return json.load(f)
 
 
-def upsert_batch(table: str, rows: list, batch_size: int = 200):
+def upsert_batch(table: str, rows: list, batch_size: int = 200, on_conflict: str = None):
     """Insert rows in batches, report count."""
     if not rows:
         print(f"  ⚠️  No rows to insert for {table}")
@@ -43,7 +43,10 @@ def upsert_batch(table: str, rows: list, batch_size: int = 200):
     total = 0
     for i in range(0, len(rows), batch_size):
         batch = rows[i:i + batch_size]
-        sb.table(table).upsert(batch).execute()
+        if on_conflict:
+            sb.table(table).upsert(batch, on_conflict=on_conflict).execute()
+        else:
+            sb.table(table).upsert(batch).execute()
         total += len(batch)
         print(f"  → {table}: {total}/{len(rows)} rows inserted", end="\r")
     print(f"  ✅ {table}: {total} rows inserted.          ")
@@ -94,28 +97,43 @@ def seed_products():
 # ─────────────────────────────────────────────────────────────────────────────
 def seed_customers():
     print("\n👥 Seeding customers...")
-    raw = load_json("customers.json")
+    # Calculate real order stats from invoices
+    inv_stats = {}
+    invoices = load_json("invoices.json")
+    for i in invoices:
+        name = str(i.get("cust_name", "")).strip()
+        if not name: continue
+        try: qty = float(str(i.get("prod_qty", "")).replace(",", "").strip())
+        except: qty = 0.0
+        if name not in inv_stats: inv_stats[name] = {"orders": 0, "qty": 0.0}
+        inv_stats[name]["orders"] += 1
+        inv_stats[name]["qty"] += qty
+
     rows = []
     seen = set()
-    for c in raw:
-        name = str(c.get("name", "")).strip()
-        if not name or name in seen:
-            continue
+    
+    def add_customer(name, rep=None):
+        if not name or name in seen: return
         seen.add(name)
-        rows.append(dict(name=name, total_orders=0, total_qty_mt=0.0,
-                         dispatched_qty_mt=0.0, is_repeat=False, sales_rep=None))
+        stats = inv_stats.get(name, {"orders": 0, "qty": 0.0})
+        rows.append(dict(
+            name=name,
+            total_orders=stats["orders"],
+            total_qty_mt=stats["qty"],
+            dispatched_qty_mt=stats["qty"],
+            is_repeat=stats["orders"] > 0,
+            sales_rep=rep
+        ))
 
-    # Also pull unique customer names from enquiries
+    raw = load_json("customers.json")
+    for c in raw:
+        add_customer(str(c.get("name", "")).strip())
+
     enquiries = load_json("enquiries.json")
     for e in enquiries:
-        name = str(e.get("cust_name", "")).strip()
-        if name and name not in seen:
-            seen.add(name)
-            rows.append(dict(name=name, total_orders=0, total_qty_mt=0.0,
-                             dispatched_qty_mt=0.0, is_repeat=False,
-                             sales_rep=e.get("emp_name")))
+        add_customer(str(e.get("cust_name", "")).strip(), e.get("emp_name"))
 
-    upsert_batch("customers", rows)
+    upsert_batch("customers", rows, on_conflict="name")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

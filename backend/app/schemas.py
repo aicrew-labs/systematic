@@ -19,6 +19,7 @@ class DailyRatesInput(BaseModel):
 
 class QuoteRequest(BaseModel):
     customer_id: str
+    customer_name: Optional[str] = None
     product_type: str
     product_code: str
     quantity_mt: float
