@@ -1,44 +1,96 @@
+"""
+Pydantic schemas for Quote Intelligence API.
+Path 2 architecture — single bundled response from /api/v1/analyze.
+"""
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Literal
+
+
+# ── Read-only listings ─────────────────────────────────────────────────────
 
 class CustomerInfo(BaseModel):
-    customer_id: str
+    id: int
     name: str
+    total_orders: int = 0
+    is_repeat: bool = False
 
-class ProductInfo(BaseModel):
-    product_code: str
-    category: str
-    diameter_mm: Optional[float] = None
-    tensile_strength: Optional[str] = None
-    zinc_coating_gsm: Optional[float] = None
 
-class DailyRatesInput(BaseModel):
-    steel_ms_rate: float
-    steel_hc_rate: float
+class ProductSize(BaseModel):
+    id: int
+    size_label: str
+    size_mm: Optional[float] = None
+    unit_of_measure: str = "MT"
+
+
+class ProductGroup(BaseModel):
+    """Products grouped by product_type for the dashboard dropdown."""
+    product_type: str
+    sizes: List[ProductSize]
+
+
+class DailyRatesOut(BaseModel):
+    ms_steel_rate: float
+    hc_steel_rate: float
     zinc_rate: float
 
-class QuoteRequest(BaseModel):
-    customer_id: str
-    customer_name: Optional[str] = None
-    product_type: str
-    product_code: str
-    quantity_mt: float
-    diameter_mm: Optional[float] = None
-    zinc_coating_gsm: Optional[float] = None
-    tensile_strength: Optional[str] = None
-    application: Optional[str] = None
-    location: Optional[str] = None
-    payment_terms: Optional[str] = None
 
-class QuoteResponse(BaseModel):
-    base_cost_mt: float
-    zinc_cost_mt: float
-    conversion_cost_mt: float
-    floor_price_mt: float
-    target_price_mt: float
-    recommended_price_mt: float
-    historical_avg_price: Optional[float] = None
-    historical_win_rate: Optional[float] = None
-    market_signal: str
-    pricing_logic_explanation: str
-    recent_quotes: List[Dict[str, Any]] = []
+class DailyRatesInput(BaseModel):
+    ms_steel_rate: float
+    hc_steel_rate: float
+    zinc_rate: float
+
+
+# ── Analyze request/response ───────────────────────────────────────────────
+
+class AnalyzeRequest(BaseModel):
+    customer_id: int
+    product_id: int
+    quantity: float
+    payment_terms: Optional[str] = "30 Days"
+    mode: Literal["ai", "algo"] = "algo"   # algo by default — no API spend
+
+
+class ContextCard(BaseModel):
+    label: str
+    value: str
+    sub_text: str = ""
+
+
+class MarketSignal(BaseModel):
+    color: Literal["green", "amber", "red", "blue"]
+    text: str
+
+
+class HistoryRow(BaseModel):
+    date: Optional[str] = None
+    customer_name: Optional[str] = None
+    product_label: Optional[str] = None
+    rate: Optional[float] = None
+    quantity: Optional[float] = None
+    unit: Optional[str] = None
+    outcome: Literal["won", "lost", "in_progress", "open"] = "open"
+    # Reference numbers for traceability — populated when available.
+    invoice_no: Optional[str] = None     # ERP inv_nos, e.g. 'VIPL/187/27'
+    so_no: Optional[str] = None          # ERP so_number, e.g. 'SO/26-27/00296'
+    enquiry_no: Optional[str] = None     # ERP enquiry_no, e.g. 'CRM/26-27/EQ/0157'
+
+
+class PriceRange(BaseModel):
+    suggested_low: Optional[float] = None
+    suggested_high: Optional[float] = None
+    market_low: Optional[float] = None       # 25th percentile of market history
+    market_high: Optional[float] = None      # 75th percentile
+    market_median: Optional[float] = None
+    sample_size: int = 0                     # # of invoices the band is based on
+    unit: str = "MT"
+
+
+class AnalyzeResponse(BaseModel):
+    mode_used: Literal["ai", "algo"]
+    price_range: PriceRange
+    context_cards: List[ContextCard]
+    market_signals: List[MarketSignal]
+    market_history: List[HistoryRow]      # won invoices for this product
+    customer_history: List[HistoryRow]    # won invoices for this customer
+    inquiry_history: List[HistoryRow]     # enquiries with computed status
+    reasoning: str

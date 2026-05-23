@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quote Intelligence POC - Systematic Industries</title>
-    <!-- Suppress Tailwind CDN console warning -->
+    <title>Quote Intelligence — Systematic Industries</title>
     <script>
         const _warn = console.warn.bind(console);
         console.warn = (...args) => {
@@ -12,320 +11,133 @@
             _warn(...args);
         };
     </script>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com/3.4.1"></script>
-    <!-- Supabase JS Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
     <script>
         tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        slate: { 850: '#151f32', 900: '#0f172a', 950: '#020617' }
-                    }
-                }
-            }
-        }
+            theme: { extend: {
+                fontFamily: { sans: ['Inter', 'sans-serif'] },
+                colors: { slate: { 850: '#151f32', 900: '#0f172a', 950: '#020617' } },
+            } },
+        };
     </script>
-    
     <style>
-        /* ── Reset & base ── */
         *, *::before, *::after { box-sizing: border-box; }
+        body { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: #f1f5f9; min-height: 100vh; overflow-x: hidden; }
 
-        body {
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-            color: #f1f5f9;
-            min-height: 100vh;
-            /* Prevent horizontal overflow on mobile */
-            overflow-x: hidden;
-        }
+        .glass-card { background: rgba(30,41,59,0.7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(148,163,184,0.15); border-radius: 16px; }
+        .gradient-text { background: linear-gradient(135deg, #6366f1, #10b981); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
-        .glass-card {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(148, 163, 184, 0.15);
-            border-radius: 16px;
-        }
+        .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); transition: all .3s; min-height: 52px; touch-action: manipulation; }
+        .btn-primary:active:not(:disabled) { transform: scale(.98); box-shadow: 0 4px 16px rgba(99,102,241,.35); }
+        @media (hover: hover) { .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(99,102,241,.35); } }
+        .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
 
-        .gradient-text {
-            background: linear-gradient(135deg, #6366f1, #10b981);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
+        .btn-algo { background: linear-gradient(135deg, #10b981, #14b8a6); transition: all .3s; min-height: 52px; touch-action: manipulation; }
+        .btn-algo:active:not(:disabled) { transform: scale(.98); box-shadow: 0 4px 16px rgba(16,185,129,.35); }
+        @media (hover: hover) { .btn-algo:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(16,185,129,.35); } }
+        .btn-algo:disabled { opacity: .5; cursor: not-allowed; }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            transition: all 0.3s;
-            /* Larger tap target on mobile */
-            min-height: 52px;
-            touch-action: manipulation;
-        }
-        .btn-primary:active:not(:disabled) {
-            transform: scale(0.98);
-            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
-        }
-        @media (hover: hover) {
-            .btn-primary:hover:not(:disabled) {
-                transform: translateY(-1px);
-                box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
-            }
-        }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        /* ── Form controls ── */
-        .form-input, .form-select {
-            width: 100%;
-            padding: 14px 16px;
-            background: rgba(15, 23, 42, 0.9);
-            border: 1px solid rgba(148, 163, 184, 0.25);
-            border-radius: 12px;
-            color: #f1f5f9;
-            font-size: 16px;           /* prevents iOS auto-zoom */
-            -webkit-appearance: none;  /* normalize selects on iOS */
-            appearance: none;
-            outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            /* Comfortable tap height */
-            min-height: 50px;
-        }
-        .form-input:focus, .form-select:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
-        }
+        .form-input, .form-select { width: 100%; padding: 14px 16px; background: rgba(15,23,42,.9); border: 1px solid rgba(148,163,184,.25); border-radius: 12px; color: #f1f5f9; font-size: 16px; -webkit-appearance: none; appearance: none; outline: none; transition: border-color .2s, box-shadow .2s; min-height: 50px; }
+        .form-input:focus, .form-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.18); }
         .form-select option { background: #1e293b; }
 
-        /* Custom chevron for <select> */
-        .select-wrapper {
-            position: relative;
-        }
-        .select-wrapper::after {
-            content: "";
-            pointer-events: none;
-            position: absolute;
-            right: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 0;
-            height: 0;
-            border-left: 5px solid transparent;
-            border-right: 5px solid transparent;
-            border-top: 6px solid #94a3b8;
-        }
+        .select-wrapper { position: relative; }
+        .select-wrapper::after { content: ""; pointer-events: none; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #94a3b8; }
 
-        /* ── Typeahead dropdown ── */
-        .search-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: #1e293b;
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 12px;
-            margin-top: 4px;
-            max-height: 220px;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            z-index: 100;
-            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
-            display: none;
-        }
+        .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #1e293b; border: 1px solid rgba(148,163,184,.2); border-radius: 12px; margin-top: 4px; max-height: 220px; overflow-y: auto; -webkit-overflow-scrolling: touch; z-index: 100; box-shadow: 0 16px 48px rgba(0,0,0,.5); display: none; }
         .search-dropdown.active { display: block; }
-        .search-item {
-            padding: 13px 16px;
-            cursor: pointer;
-            border-bottom: 1px solid rgba(148, 163, 184, 0.08);
-            font-size: 14px;
-            transition: background 0.15s;
-            /* Ensure good tap target */
-            min-height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .search-item:active { background: rgba(99, 102, 241, 0.2); }
-        @media (hover: hover) {
-            .search-item:hover { background: rgba(99, 102, 241, 0.15); }
-        }
+        .search-item { padding: 13px 16px; cursor: pointer; border-bottom: 1px solid rgba(148,163,184,.08); font-size: 14px; transition: background .15s; min-height: 48px; display: flex; align-items: center; justify-content: space-between; }
+        .search-item:active { background: rgba(99,102,241,.2); }
+        @media (hover: hover) { .search-item:hover { background: rgba(99,102,241,.15); } }
         .search-item:last-child { border-bottom: none; }
         .search-item-count { font-size: 11px; color: #94a3b8; margin-left: 8px; flex-shrink: 0; }
 
-        /* ── Animations ── */
-        .fade-in { animation: fadeIn 0.5s forwards; opacity: 0; }
+        .fade-in { animation: fadeIn .5s forwards; opacity: 0; }
         @keyframes fadeIn { to { opacity: 1; } }
-
-        .slide-up { animation: slideUp 0.5s forwards; opacity: 0; transform: translateY(16px); }
+        .slide-up { animation: slideUp .5s forwards; opacity: 0; transform: translateY(16px); }
         @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
 
-        /* ── Step loader ── */
-        .step-item {
-            opacity: 0.4;
-            transform: translateX(-8px);
-            transition: all 0.4s;
-        }
+        .step-item { opacity: .4; transform: translateX(-8px); transition: all .4s; }
         .step-item.active { opacity: 1; transform: translateX(0); color: #10b981; }
-        .step-item.done  { opacity: 0.8; transform: translateX(0); color: #94a3b8; }
+        .step-item.done { opacity: .8; transform: translateX(0); color: #94a3b8; }
 
-        /* ── Signal dots ── */
         .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; margin-top: 4px; }
         .dot.green { background: #10b981; box-shadow: 0 0 8px #10b981; }
         .dot.amber { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
         .dot.red   { background: #f43f5e; box-shadow: 0 0 8px #f43f5e; }
         .dot.blue  { background: #38bdf8; box-shadow: 0 0 8px #38bdf8; }
 
-        /* ── Price bar ── */
-        .price-bar { height: 14px; background: rgba(255,255,255,0.08); border-radius: 7px; position: relative; }
-        .price-bar-floor { position: absolute; left: 0; height: 100%; background: rgba(244,63,94,0.3); border-radius: 7px 0 0 7px; }
-        .price-bar-suggested { position: absolute; height: 100%; background: linear-gradient(90deg, #10b981, #6366f1); border-radius: 4px; box-shadow: 0 0 12px rgba(16,185,129,0.3); transition: width 1s ease-out; }
+        .price-bar { height: 14px; background: rgba(255,255,255,.08); border-radius: 7px; position: relative; }
+        .price-bar-floor { position: absolute; left: 0; height: 100%; background: rgba(244,63,94,.3); border-radius: 7px 0 0 7px; }
+        .price-bar-suggested { position: absolute; height: 100%; background: linear-gradient(90deg, #10b981, #6366f1); border-radius: 4px; box-shadow: 0 0 12px rgba(16,185,129,.3); transition: width 1s ease-out; }
 
-        /* ── SVG guard ── */
         svg { max-width: 100%; height: auto; flex-shrink: 0; }
 
-        /* ── Mobile-first layout: form + results stacked ── */
-        /* The main grid becomes single-column on mobile */
-        .main-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            padding: 16px;
-            max-width: 1280px;
-            margin: 0 auto;
-        }
-
-        /* Form panel — no sticky on mobile (results are below) */
-        .form-panel { width: 100%; }
-
-        /* Results panel */
-        .results-panel { width: 100%; }
-
+        .main-grid { display: flex; flex-direction: column; gap: 20px; padding: 16px; max-width: 1280px; margin: 0 auto; }
+        .form-panel, .results-panel { width: 100%; }
         @media (min-width: 1024px) {
-            .main-grid {
-                display: grid;
-                grid-template-columns: 380px 1fr;
-                gap: 32px;
-                padding: 32px 24px;
-                align-items: start;
-            }
+            .main-grid { display: grid; grid-template-columns: 380px 1fr; gap: 32px; padding: 32px 24px; align-items: start; }
             .form-panel { position: sticky; top: 88px; }
         }
 
-        /* ── Empty / Loading states height ── */
-        #emptyState, #loadingState {
-            min-height: 320px;
-            border-radius: 16px;
-        }
-        @media (min-width: 768px) {
-            #emptyState, #loadingState { min-height: 480px; }
-        }
+        #emptyState, #loadingState { min-height: 320px; border-radius: 16px; }
+        @media (min-width: 768px) { #emptyState, #loadingState { min-height: 480px; } }
 
-        /* ── Context cards grid: 2 cols on mobile → 3 on md ── */
-        .context-cards-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-        }
-        @media (min-width: 640px) {
-            .context-cards-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; }
-        }
+        .context-cards-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        @media (min-width: 640px) { .context-cards-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; } }
 
-        /* ── Signals + History: stacked on mobile, 2-col on md ── */
-        .signals-history-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 16px;
-        }
-        @media (min-width: 768px) {
-            .signals-history-grid { grid-template-columns: repeat(2, 1fr); }
-        }
+        .signals-history-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+        @media (min-width: 768px) { .signals-history-grid { grid-template-columns: repeat(2, 1fr); } }
 
-        /* ── Price display: larger on wide screens ── */
-        .price-figure {
-            font-size: clamp(1.75rem, 6vw, 2.5rem);
-            font-weight: 800;
-        }
+        .price-figure { font-size: clamp(1.75rem, 6vw, 2.5rem); font-weight: 800; }
 
-        /* ── Collapsible form on mobile after results shown ── */
-        .form-collapse-btn {
-            display: none;
-            width: 100%;
-            padding: 12px 16px;
-            background: rgba(99,102,241,0.12);
-            border: 1px solid rgba(99,102,241,0.25);
-            border-radius: 12px;
-            color: #a5b4fc;
-            font-size: 14px;
-            font-weight: 600;
-            text-align: center;
-            cursor: pointer;
-            margin-bottom: 12px;
-            touch-action: manipulation;
-        }
+        .form-collapse-btn { display: none; width: 100%; padding: 12px 16px; background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.25); border-radius: 12px; color: #a5b4fc; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; margin-bottom: 12px; touch-action: manipulation; }
         .form-collapse-btn.visible { display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .form-inner { transition: all 0.3s ease; }
+        .form-inner { transition: all .3s ease; }
         .form-inner.collapsed { display: none; }
 
-        /* ── Table: always scrollable on mobile ── */
         .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-
-        /* ── Header compact on mobile ── */
-        .header-inner {
-            padding: 10px 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            max-width: 1280px;
-            margin: 0 auto;
-        }
+        .header-inner { padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; max-width: 1280px; margin: 0 auto; }
         @media (min-width: 768px) { .header-inner { padding: 14px 24px; } }
     </style>
 </head>
 <body class="font-sans antialiased text-slate-200">
 
-    <!-- Top Navigation -->
     <header class="border-b border-slate-800/50 backdrop-blur-md bg-slate-900/30 sticky top-0 z-40">
         <div class="header-inner">
             <div class="flex items-center gap-3">
                 <div class="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-                    </svg>
+                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
                 </div>
                 <div>
                     <h1 class="text-sm font-bold text-white tracking-tight leading-tight">Quote Intelligence</h1>
                     <p class="text-[10px] text-slate-400 leading-tight">Systematic Industries Pvt Ltd</p>
                 </div>
             </div>
-            <span id="statusBadge" class="text-[11px] font-medium text-slate-400 bg-slate-400/10 px-2.5 py-1.5 rounded-full border border-slate-400/20 flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse shrink-0"></span>
-                Loading...
+            <span id="statusBadge" class="text-[11px] font-medium text-slate-400 bg-slate-700/30 px-2.5 py-1.5 rounded-full border border-slate-600/30 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>
+                Loading…
             </span>
         </div>
     </header>
 
     <main class="main-grid">
-        
-        <!-- LEFT COLUMN: INPUT FORM -->
+
+        <!-- LEFT: input form -->
         <div class="form-panel">
-            <!-- Collapse toggle (shown on mobile after first analysis) -->
             <button id="formToggleBtn" class="form-collapse-btn" onclick="toggleForm()">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                </svg>
-                Modify Enquiry
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Edit Enquiry
             </button>
 
             <div class="glass-card p-5 form-inner" id="formInner">
                 <div class="mb-5">
                     <h2 class="text-base font-semibold text-white">New Enquiry</h2>
-                    <p class="text-xs text-slate-400 mt-0.5">Enter details to run AI analysis</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Database-driven analysis</p>
                 </div>
-                
-                <form id="enquiryForm" onsubmit="handleAnalyze(event)" class="space-y-4">
+
+                <form id="enquiryForm" onsubmit="event.preventDefault(); handleAnalyze('algo');" class="space-y-4">
                     <div class="relative">
                         <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Customer Name</label>
                         <input type="text" id="custName" class="form-input" placeholder="Search customer..." autocomplete="off" oninput="handleCustomerSearch(event)" onclick="handleCustomerSearch(event)" required>
@@ -336,10 +148,6 @@
                         <div class="select-wrapper">
                             <select id="prodType" class="form-select" onchange="updateSizes()" required>
                                 <option value="">Select Product...</option>
-                                <option value="MS Wire">MS Wire</option>
-                                <option value="HC Patented Wire">HC Patented Wire</option>
-                                <option value="GI Wire">GI Wire</option>
-                                <option value="OFC Cable">OFC Cable</option>
                             </select>
                         </div>
                     </div>
@@ -354,7 +162,7 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Quantity</label>
-                            <input type="number" id="qty" class="form-input" placeholder="e.g. 25" required>
+                            <input type="number" id="qty" class="form-input" placeholder="e.g. 25" step="0.01" required>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Payment Terms</label>
@@ -362,87 +170,62 @@
                                 <select id="payTerms" class="form-select">
                                     <option value="Advance">Advance</option>
                                     <option value="30 Days" selected>30 Days</option>
+                                    <option value="45 Days">45 Days</option>
                                     <option value="60 Days">60 Days</option>
+                                    <option value="90 Days">90 Days</option>
                                 </select>
                             </div>
                         </div>
                     </div>
-                    <div class="pt-2">
-                        <button type="submit" id="analyzeBtn" class="btn-primary w-full rounded-xl font-semibold text-sm text-white flex justify-center items-center gap-2">
-                            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                            Analyze &amp; Get Quote
+                    <div class="grid grid-cols-2 gap-3 pt-2">
+                        <button type="button" id="algoBtn" onclick="handleAnalyze('algo')" class="btn-algo w-full rounded-xl font-semibold text-sm text-white flex justify-center items-center gap-2">
+                            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-6h13M9 5v6h13M3 7h.01M3 12h.01M3 17h.01"/></svg>
+                            Algo Quote
+                        </button>
+                        <button type="button" id="aiBtn" onclick="handleAnalyze('ai')" class="btn-primary w-full rounded-xl font-semibold text-sm text-white flex justify-center items-center gap-2">
+                            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            AI Quote
                         </button>
                     </div>
+                    <p class="text-[10px] text-slate-500 text-center pt-1">Algo is free for testing. AI uses OpenAI credits.</p>
                 </form>
             </div>
         </div>
 
-        <!-- RIGHT COLUMN: RESULTS OR LOADING -->
+        <!-- RIGHT: results -->
         <div class="results-panel">
-            
-            <!-- Default Empty State -->
             <div id="emptyState" class="flex flex-col items-center justify-center text-center p-8 glass-card">
                 <div class="w-14 h-14 shrink-0 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-4 border border-indigo-500/20">
-                    <svg class="w-7 h-7 shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                    </svg>
+                    <svg class="w-7 h-7 shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
                 </div>
                 <h3 class="text-lg font-semibold text-white mb-2">Ready for Analysis</h3>
-                <p class="text-sm text-slate-400 max-w-xs">Enter client details and hit Analyze to see the intelligence engine compile context, market signals, and price recommendations.</p>
+                <p class="text-sm text-slate-400 max-w-xs">Pick a customer and product, then run the Algo or AI quote.</p>
             </div>
 
-            <!-- Loading State -->
             <div id="loadingState" class="hidden flex-col items-center justify-center p-8 glass-card border border-indigo-500/30">
                 <div class="w-full max-w-sm mx-auto">
                     <div class="flex items-center gap-3 mb-8 justify-center">
-                        <svg class="animate-spin h-6 w-6 shrink-0 text-indigo-400" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                        </svg>
-                        <h3 class="text-base font-semibold text-white">AI Processing...</h3>
+                        <svg class="animate-spin h-6 w-6 shrink-0 text-indigo-400" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                        <h3 id="loadingTitle" class="text-base font-semibold text-white">Processing…</h3>
                     </div>
                     <div class="space-y-4 text-sm font-medium" id="stepList">
-                        <div class="step-item flex items-center gap-3" id="step1">
-                            <span class="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center shrink-0 text-xs"></span>
-                            <span>Retrieving CRM history &amp; relationship...</span>
-                        </div>
-                        <div class="step-item flex items-center gap-3" id="step2">
-                            <span class="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center shrink-0 text-xs"></span>
-                            <span>Checking real-time FG stock levels...</span>
-                        </div>
-                        <div class="step-item flex items-center gap-3" id="step3">
-                            <span class="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center shrink-0 text-xs"></span>
-                            <span>Analyzing machine capacity &amp; utilisation...</span>
-                        </div>
-                        <div class="step-item flex items-center gap-3" id="step4">
-                            <span class="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center shrink-0 text-xs"></span>
-                            <span>Calculating RM baseline costs...</span>
-                        </div>
-                        <div class="step-item flex items-center gap-3" id="step5">
-                            <span class="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center shrink-0 text-xs"></span>
-                            <span>Synthesizing market signals...</span>
-                        </div>
+                        <div class="step-item flex items-center gap-3" id="step1"><span class="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center shrink-0 text-xs"></span><span>Querying database…</span></div>
+                        <div class="step-item flex items-center gap-3" id="step2"><span class="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center shrink-0 text-xs"></span><span>Computing floor / target prices…</span></div>
+                        <div class="step-item flex items-center gap-3" id="step3"><span class="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center shrink-0 text-xs"></span><span>Synthesizing market signals…</span></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Dashboard Results State -->
             <div id="resultsState" class="hidden flex-col gap-4 pb-8">
-                
-                <!-- 1. Price Range -->
+
                 <div class="glass-card p-5 slide-up border border-indigo-500/40 shadow-lg shadow-indigo-500/10">
                     <div class="flex items-center gap-2 mb-4">
                         <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0">
-                            <svg class="w-4 h-4 text-white shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                            </svg>
+                            <svg class="w-4 h-4 text-white shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
                         </div>
-                        <h3 class="text-sm font-semibold text-white uppercase tracking-wide">AI Suggested Price</h3>
-                        <span class="ml-auto text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">POC MODE</span>
+                        <h3 id="resultCardTitle" class="text-sm font-semibold text-white uppercase tracking-wide">Suggested Price</h3>
+                        <span id="resultCardBadge" class="ml-auto text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">ALGO</span>
                     </div>
-
                     <div class="text-center mb-5">
                         <div class="flex items-baseline justify-center gap-2">
                             <span class="price-figure gradient-text" id="priceLow">--</span>
@@ -451,84 +234,73 @@
                         </div>
                         <p class="text-sm text-slate-400 mt-1.5" id="priceUnit">per MT</p>
                     </div>
-
                     <div class="mb-5">
                         <div class="price-bar">
-                            <div class="price-bar-floor" style="width: 20%" id="barFloor"></div>
-                            <div class="price-bar-suggested" style="left: 20%; width: 40%" id="barSuggested"></div>
+                            <div class="price-bar-floor" id="barFloor" style="width: 20%"></div>
+                            <div class="price-bar-suggested" id="barSuggested" style="left: 20%; width: 40%"></div>
                         </div>
                         <div class="flex justify-between mt-2 text-xs">
-                            <div class="text-left text-rose-400">Floor: <span id="lblFloor"></span></div>
-                            <div class="text-right text-slate-400">Ceiling: <span id="lblCeil"></span></div>
+                            <div class="text-left text-rose-400">Market low: <span id="lblFloor">—</span></div>
+                            <div class="text-center text-slate-400">Median: <span id="lblMedian">—</span></div>
+                            <div class="text-right text-slate-400">Market high: <span id="lblCeil">—</span></div>
                         </div>
+                        <p class="text-[10px] text-slate-500 mt-1 text-center" id="lblSampleSize"></p>
                     </div>
-
                     <div class="p-4 rounded-xl bg-slate-900/50 border border-slate-700/50">
                         <p class="text-sm text-slate-300 leading-relaxed" id="aiReasoning"></p>
                     </div>
                 </div>
 
-                <!-- 2. Context Cards -->
-                <div class="context-cards-grid" id="contextCardsContainer">
-                    <!-- Populated via JS -->
-                </div>
+                <div class="context-cards-grid" id="contextCardsContainer"></div>
 
-                <!-- 3. Signals and History -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mt-4 lg:mt-6">
-                    <div class="glass-panel p-4 lg:p-6 pb-2">
-                        <div class="flex items-center space-x-2 text-slate-300 mb-4">
-                            <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                            </svg>
-                            <h3 class="font-bold tracking-wider uppercase text-sm">Market Signals</h3>
+                <div class="signals-history-grid">
+                    <div class="glass-card p-5 slide-up">
+                        <div class="flex items-center gap-2 mb-4">
+                            <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+                            <h3 class="text-sm font-semibold text-white uppercase tracking-wide">Market Signals</h3>
                         </div>
-                        <div id="marketSignalsContainer" class="space-y-3"></div>
+                        <div class="space-y-3" id="marketSignalsContainer"></div>
                     </div>
 
-                    <div class="glass-panel p-4 lg:p-6 pb-2">
-                        <div class="flex items-center space-x-2 text-slate-300 mb-4">
-                            <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            <h3 class="font-bold tracking-wider uppercase text-sm">Market History (This Product)</h3>
+                    <div class="glass-card p-5 slide-up">
+                        <div class="flex items-center gap-2 mb-4">
+                            <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <h3 class="text-sm font-semibold text-white uppercase tracking-wide">Market History (this product)</h3>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-xs text-left">
-                                <thead class="text-slate-400 border-b border-slate-700/50">
-                                    <tr>
-                                        <th class="pb-2 font-medium">Date</th>
-                                        <th class="pb-2 font-medium">Customer</th>
-                                        <th class="pb-2 font-medium text-right">Rate</th>
-                                        <th class="pb-2 font-medium text-right">Outcome</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="historyTable" class="divide-y divide-slate-700/50">
-                                </tbody>
+                        <div class="table-scroll">
+                            <table class="w-full text-xs text-left" style="min-width: 260px">
+                                <thead><tr class="text-slate-400 border-b border-slate-700/50"><th class="pb-2 font-medium">Date</th><th class="pb-2 font-medium">Customer</th><th class="pb-2 font-medium text-right">Rate</th><th class="pb-2 font-medium text-right">Outcome</th></tr></thead>
+                                <tbody id="marketHistoryBody"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
-                <div class="glass-panel p-4 lg:p-6 mt-4 lg:mt-6">
-                    <div class="flex items-center space-x-2 text-slate-300 mb-4">
-                        <svg class="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                        </svg>
-                        <h3 class="font-bold tracking-wider uppercase text-sm">Customer History (All Products)</h3>
+                <div class="signals-history-grid">
+                    <div class="glass-card p-5 slide-up">
+                        <div class="flex items-center gap-2 mb-4">
+                            <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                            <h3 class="text-sm font-semibold text-white uppercase tracking-wide">Customer History</h3>
+                        </div>
+                        <div class="table-scroll">
+                            <table class="w-full text-xs text-left" style="min-width: 260px">
+                                <thead><tr class="text-slate-400 border-b border-slate-700/50"><th class="pb-2 font-medium">Date</th><th class="pb-2 font-medium">Product</th><th class="pb-2 font-medium text-right">Rate</th><th class="pb-2 font-medium text-right">Outcome</th></tr></thead>
+                                <tbody id="customerHistoryBody"></tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-xs text-left">
-                            <thead class="text-slate-400 border-b border-slate-700/50">
-                                <tr>
-                                    <th class="pb-2 font-medium">Date</th>
-                                    <th class="pb-2 font-medium">Product</th>
-                                    <th class="pb-2 font-medium text-right">Rate</th>
-                                    <th class="pb-2 font-medium text-right">Outcome</th>
-                                </tr>
-                            </thead>
-                            <tbody id="customerHistoryTable" class="divide-y divide-slate-700/50">
-                            </tbody>
-                        </table>
+
+                    <div class="glass-card p-5 slide-up">
+                        <div class="flex items-center gap-2 mb-4">
+                            <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+                            <h3 class="text-sm font-semibold text-white uppercase tracking-wide">Inquiry History (this product)</h3>
+                        </div>
+                        <div class="table-scroll">
+                            <table class="w-full text-xs text-left" style="min-width: 320px">
+                                <thead><tr class="text-slate-400 border-b border-slate-700/50"><th class="pb-2 font-medium">Enquiry #</th><th class="pb-2 font-medium">Date</th><th class="pb-2 font-medium">Customer</th><th class="pb-2 font-medium text-right">Offered</th><th class="pb-2 font-medium text-right">Status</th></tr></thead>
+                                <tbody id="inquiryHistoryBody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -536,103 +308,94 @@
         </div>
     </main>
 
-    <!-- LIVE SUPABASE LOGIC -->
     <script>
-        // ── Supabase Client ──────────────────────────────────────────────────────
-        const SUPABASE_URL  = 'https://bgccqhsfkxghcaetjngc.supabase.co';
-        const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnY2NxaHNma3hnaGNhZXRqbmdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMDE2OTgsImV4cCI6MjA5NDY3NzY5OH0.WhYvhHz2ayU0Qq26RBjGKJaJG_FOE7SJyKiYJHA70OM';
-        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+        // ── State ────────────────────────────────────────────────────────────
+        const STATE = {
+            customers: [],
+            products:  {},   // { product_type: [{id, size_label, size_mm, unit_of_measure}] }
+            selectedCustomer: null,
+        };
 
-        // ── In-memory caches (loaded once on page init) ──────────────────────────
-        let CUSTOMERS   = [];   // { name, total_orders, is_repeat, sales_rep }
-        let PRODUCTS    = {};   // { 'MS Wire': [{size_label, unit_of_measure},...], ... }
-        let DAILY_RATES = { ms_steel_rate: 52000, hc_steel_rate: 67000, zinc_rate: 260 };
-
-        // ── Boot: load customers + products + daily rates ─────────────────────────
-        async function initDashboard() {
+        // ── Boot ─────────────────────────────────────────────────────────────
+        async function init() {
             try {
-                const [custRes, prodRes, ratesRes] = await Promise.all([
-                    sb.from('customers').select('name,total_orders,is_repeat,sales_rep').order('total_orders', { ascending: false }).limit(600),
-                    sb.from('products').select('product_type,size_label,unit_of_measure').order('product_type').order('size_mm'),
-                    sb.from('daily_rates').select('ms_steel_rate,hc_steel_rate,zinc_rate').order('rate_date', { ascending: false }).limit(1),
+                const [custResp, prodResp] = await Promise.all([
+                    fetch('/api/v1/customers'),
+                    fetch('/api/v1/products'),
                 ]);
+                if (!custResp.ok || !prodResp.ok) throw new Error('API not reachable');
 
-                if (custRes.data)  CUSTOMERS = custRes.data;
-                if (ratesRes.data && ratesRes.data.length) DAILY_RATES = ratesRes.data[0];
+                STATE.customers = await custResp.json();
 
-                // Group products by type
-                if (prodRes.data) {
-                    prodRes.data.forEach(p => {
-                        if (!PRODUCTS[p.product_type]) PRODUCTS[p.product_type] = [];
-                        PRODUCTS[p.product_type].push(p);
-                    });
-                }
+                const groups = await prodResp.json();
+                STATE.products = {};
+                groups.forEach(g => { STATE.products[g.product_type] = g.sizes; });
 
-                // Update status badge
-                document.getElementById('statusBadge').textContent = '● Live Data';
-                document.getElementById('statusBadge').classList.add('text-emerald-400');
-                console.log(`✅ Loaded: ${CUSTOMERS.length} customers, ${Object.keys(PRODUCTS).length} product types`);
-            } catch(err) {
-                console.error('Failed to load data:', err);
+                // Populate product type dropdown
+                const sel = document.getElementById('prodType');
+                sel.innerHTML = '<option value="">Select Product...</option>';
+                Object.keys(STATE.products).forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t; opt.textContent = t;
+                    sel.appendChild(opt);
+                });
+
+                const badge = document.getElementById('statusBadge');
+                badge.textContent = '● Live Data';
+                badge.className = 'text-[11px] font-medium text-emerald-400 bg-emerald-400/10 px-2.5 py-1.5 rounded-full border border-emerald-400/20 flex items-center gap-1.5';
+                console.log(`Loaded ${STATE.customers.length} customers, ${Object.keys(STATE.products).length} product types`);
+            } catch (err) {
+                console.error('Init failed:', err);
+                const badge = document.getElementById('statusBadge');
+                badge.textContent = '● Backend Offline';
+                badge.className = 'text-[11px] font-medium text-rose-400 bg-rose-400/10 px-2.5 py-1.5 rounded-full border border-rose-400/20 flex items-center gap-1.5';
             }
         }
 
-        let selectedCustomer = null;
-
-        // ── Customer Typeahead ────────────────────────────────────────────────────
+        // ── Customer typeahead ───────────────────────────────────────────────
         function handleCustomerSearch(e) {
             const val = e.target.value.toLowerCase();
             const dropdown = document.getElementById('custDropdown');
             dropdown.innerHTML = '';
-
-            const matches = CUSTOMERS
+            const matches = STATE.customers
                 .filter(c => c.name.toLowerCase().includes(val))
                 .slice(0, 12);
-
-            if (matches.length > 0) {
-                matches.forEach(c => {
-                    const div = document.createElement('div');
-                    div.className = 'search-item flex items-center justify-between';
-                    const label = c.total_orders > 0 ? `${c.total_orders} orders` : 'New Client';
-                    div.innerHTML = `<span>${c.name}</span><span class="search-item-count">${label}</span>`;
-                    div.onclick = () => {
-                        document.getElementById('custName').value = c.name;
-                        selectedCustomer = c;
-                        dropdown.classList.remove('active');
-                    };
-                    dropdown.appendChild(div);
-                });
-                dropdown.classList.add('active');
-            } else {
-                dropdown.classList.remove('active');
-            }
+            if (matches.length === 0) { dropdown.classList.remove('active'); return; }
+            matches.forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'search-item flex items-center justify-between';
+                const label = c.total_orders > 0 ? `${c.total_orders} orders` : 'New Client';
+                div.innerHTML = `<span>${escapeHtml(c.name)}</span><span class="search-item-count">${label}</span>`;
+                div.onclick = () => {
+                    document.getElementById('custName').value = c.name;
+                    STATE.selectedCustomer = c;
+                    dropdown.classList.remove('active');
+                };
+                dropdown.appendChild(div);
+            });
+            dropdown.classList.add('active');
         }
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(e) {
-            const dropdown = document.getElementById('custDropdown');
-            const input = document.getElementById('custName');
-            if (!dropdown.contains(e.target) && e.target !== input) {
-                dropdown.classList.remove('active');
-            }
+        document.addEventListener('click', (e) => {
+            const dd = document.getElementById('custDropdown');
+            const inp = document.getElementById('custName');
+            if (!dd.contains(e.target) && e.target !== inp) dd.classList.remove('active');
         });
 
-        // ── Product Size Dropdown — populated from live Supabase data ─────────────
+        // ── Product size dropdown ────────────────────────────────────────────
         function updateSizes() {
-            const p = document.getElementById('prodType').value;
+            const t = document.getElementById('prodType').value;
             const s = document.getElementById('prodSize');
             s.innerHTML = '<option value="">Select Size...</option>';
-            if (PRODUCTS[p]) {
-                PRODUCTS[p].forEach(prod => {
-                    const opt = document.createElement('option');
-                    opt.value = prod.size_label;
-                    opt.textContent = prod.size_label;
-                    s.appendChild(opt);
-                });
-            }
+            (STATE.products[t] || []).forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.size_label;
+                opt.setAttribute('data-unit', p.unit_of_measure || 'MT');
+                s.appendChild(opt);
+            });
         }
 
-        // ── Mobile form collapse ──────────────────────────────────────────────────
+        // ── Form collapse on mobile ──────────────────────────────────────────
         function toggleForm() {
             const inner = document.getElementById('formInner');
             const btn   = document.getElementById('formToggleBtn');
@@ -642,277 +405,208 @@
                 : `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg> Close`;
         }
 
-        // ── Main Analyze Handler — all data from Supabase ─────────────────────────
-        async function handleAnalyze(e) {
-            e.preventDefault();
+        // ── Analyze ──────────────────────────────────────────────────────────
+        async function handleAnalyze(mode) {
+            const cust = STATE.selectedCustomer;
+            const prodTypeVal = document.getElementById('prodType').value;
+            const prodSizeSel = document.getElementById('prodSize');
+            const productId   = parseInt(prodSizeSel.value, 10);
+            const qty         = parseFloat(document.getElementById('qty').value);
+            const payTerms    = document.getElementById('payTerms').value;
 
-            const custInput = document.getElementById('custName').value;
-            const prodType  = document.getElementById('prodType').value;
-            const size      = document.getElementById('prodSize').value;
-            const qty       = parseFloat(document.getElementById('qty').value) || 1;
-            const payTerms  = document.getElementById('payTerms').value;
+            if (!cust || !cust.id) { alert('Please pick a customer from the dropdown.'); return; }
+            if (!prodTypeVal || !productId) { alert('Please select a product type and size.'); return; }
+            if (!qty || qty <= 0) { alert('Please enter a valid quantity.'); return; }
 
-            if (!custInput || !prodType || !size) {
-                alert('Please select customer and product details first.');
-                return;
-            }
-
-            if (!selectedCustomer || selectedCustomer.name !== custInput) {
-                const match = CUSTOMERS.find(c => c.name.toLowerCase() === custInput.toLowerCase());
-                selectedCustomer = match || { name: custInput, total_orders: 0, is_repeat: false };
-            }
-
-            const btn     = document.getElementById('analyzeBtn');
+            const algoBtn = document.getElementById('algoBtn');
+            const aiBtn   = document.getElementById('aiBtn');
             const empty   = document.getElementById('emptyState');
             const loading = document.getElementById('loadingState');
             const results = document.getElementById('resultsState');
 
-            btn.disabled = true;
+            algoBtn.disabled = true; aiBtn.disabled = true;
             empty.classList.add('hidden');
             results.classList.add('hidden');
             loading.classList.remove('hidden');
             loading.classList.add('flex');
+            document.getElementById('loadingTitle').textContent = mode === 'ai' ? 'AI Processing…' : 'Algorithm Processing…';
 
-            const steps = [1,2,3,4,5].map(i => document.getElementById(`step${i}`));
+            const steps = [1, 2, 3].map(i => document.getElementById(`step${i}`));
             steps.forEach(s => { s.className = 'step-item flex items-center gap-3'; s.children[0].innerHTML = ''; });
-
-            // ── Step 1: CRM History ───────────────────────────────────────────────
             steps[0].classList.add('active');
-            const [histRes, custEnqRes, custHistRes] = await Promise.all([
-                sb.from('quote_history')
-                    .select('quote_date,unit_rate_inr,outcome,quantity,unit,customer_name')
-                    .eq('product_type', prodType)
-                    .ilike('size_label', `%${size.split(' ')[0]}%`)
-                    .order('quote_date', { ascending: false })
-                    .limit(20),
-                sb.from('enquiries')
-                    .select('id')
-                    .ilike('customer_name', `%${custInput.split(' ')[0]}%`)
-                    .limit(1),
-                sb.from('quote_history')
-                    .select('quote_date,unit_rate_inr,outcome,product_type,size_label,customer_name')
-                    .ilike('customer_name', `%${custInput.split(' ')[0]}%`)
-                    .order('quote_date', { ascending: false })
-                    .limit(20)
-            ]);
-            await new Promise(r => setTimeout(r, 500));
-            steps[0].classList.replace('active','done'); steps[0].children[0].innerHTML = '✓';
 
-            // ── Step 2: FG Stock ──────────────────────────────────────────────────
-            steps[1].classList.add('active');
-            const fgRes = await sb.from('fg_inventory')
-                .select('quantity_mt,unit_name,inventory_type')
-                .eq('product_type', prodType)
-                .ilike('size_label', `%${size.split(' ')[0]}%`);
-            await new Promise(r => setTimeout(r, 500));
-            steps[1].classList.replace('active','done'); steps[1].children[0].innerHTML = '✓';
-
-            // ── Step 3: Machine Utilisation ───────────────────────────────────────
-            steps[2].classList.add('active');
-            const machRes = await sb.from('machines')
-                .select('current_utilisation_pct,capacity_mt_per_day,unit_name')
-                .eq('product_types', prodType)
-                .eq('active', true);
-            await new Promise(r => setTimeout(r, 500));
-            steps[2].classList.replace('active','done'); steps[2].children[0].innerHTML = '✓';
-
-            // ── Step 4: RM Cost ───────────────────────────────────────────────────
-            steps[3].classList.add('active');
-            const rmRes = await sb.from('rm_prices')
-                .select('rate_per_mt_inr,vendor_name,rm_grade')
-                .order('rate_per_mt_inr', { ascending: true })
-                .limit(3);
-            await new Promise(r => setTimeout(r, 400));
-            steps[3].classList.replace('active','done'); steps[3].children[0].innerHTML = '✓';
-
-            // ── Step 5: Synthesize ────────────────────────────────────────────────
-            steps[4].classList.add('active');
-            await new Promise(r => setTimeout(r, 400));
-            steps[4].classList.replace('active','done'); steps[4].children[0].innerHTML = '✓';
-
-            await new Promise(r => setTimeout(r, 300));
-            loading.classList.replace('flex','hidden');
-            results.classList.remove('hidden');
-            results.style.display = 'flex';
-
-            // ── Collapse form on mobile ───────────────────────────────────────────
-            if (window.innerWidth < 1024) {
-                document.getElementById('formInner').classList.add('collapsed');
-                const toggleBtn = document.getElementById('formToggleBtn');
-                toggleBtn.classList.add('visible');
-                toggleBtn.innerHTML = `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Edit Enquiry`;
-                setTimeout(() => document.querySelector('.results-panel').scrollIntoView({ behavior:'smooth', block:'start' }), 100);
-            }
-
-            // ── Compute data from live results ────────────────────────────────────
-            const unit = prodType === 'OFC Cable' ? 'KME' : (prodType === 'HC Patented Wire' ? 'MTS' : 'MT');
-
-            // RM Cost floor
-            let rmCost = DAILY_RATES.ms_steel_rate || 52000;
-            let rmVendor = 'Market Rate (MS Steel)';
-            if (prodType === 'HC Patented Wire') { rmCost = DAILY_RATES.hc_steel_rate || 67000; rmVendor = 'Market Rate (HC Steel)'; }
-            if (prodType === 'GI Wire') { rmCost = (DAILY_RATES.ms_steel_rate || 52000) + (DAILY_RATES.zinc_rate || 260) * 5; rmVendor = 'MS + Zinc conversion'; }
-            if (prodType === 'OFC Cable') { rmCost = 3000; rmVendor = 'OFC Components'; }
-            if (rmRes.data && rmRes.data.length) {
-                rmCost = rmRes.data[0].rate_per_mt_inr;
-                rmVendor = rmRes.data[0].vendor_name + ' — ' + rmRes.data[0].rm_grade;
-            }
-
-            const convCost = prodType==='MS Wire'?3000 : prodType==='HC Patented Wire'?4500 : prodType==='GI Wire'?5500 : 800;
-            const floor    = rmCost + convCost;
-            const ceil     = floor * 1.25;
-
-            // Credit premium
-            const creditPrem = payTerms==='Advance'?0 : payTerms==='30 Days'?500 : payTerms==='60 Days'?1200 : 800;
-
-            // Price range from real history if available, else heuristic
-            let priceLow, priceHigh;
-            const histRates = (histRes.data||[]).map(h=>h.unit_rate_inr).filter(r=>r>floor*0.9);
-            if (histRates.length >= 3) {
-                histRates.sort((a,b)=>a-b);
-                priceLow  = Math.round(histRates[Math.floor(histRates.length*0.25)] + creditPrem);
-                priceHigh = Math.round(histRates[Math.floor(histRates.length*0.75)] + creditPrem);
-            } else {
-                priceLow  = Math.round(floor * 1.08 + creditPrem);
-                priceHigh = Math.round(floor * 1.15 + creditPrem);
-            }
-
-            // FG Stock
-            const totalFG = (fgRes.data||[]).reduce((s,r)=>s+(r.quantity_mt||0),0);
-            const fgText  = totalFG>0 ? `${totalFG.toFixed(1)} ${unit}` : `0.0 ${unit}`;
-            const fgSub   = totalFG>0 ? 'Ready to dispatch now' : 'Full production required';
-
-            // Machine utilisation
-            const machines = machRes.data || [];
-            const avgUtil  = machines.length ? Math.round(machines.reduce((s,m)=>s+m.current_utilisation_pct,0)/machines.length) : 72;
-            const utilSub  = avgUtil>80 ? 'High load — expect delays' : 'Manageable capacity';
-            const etaDays  = totalFG>qty ? '1–2 Days' : avgUtil>80 ? '8–12 Days' : '3–5 Days';
-            const etaSub   = totalFG>qty ? 'In stock, ready for dispatch' : 'Production + dispatch time';
-
-            // Customer context
-            const isRepeat   = selectedCustomer.is_repeat || selectedCustomer.total_orders > 0;
-            const orderCount = selectedCustomer.total_orders || 0;
-            const custStr    = isRepeat ? 'Repeat Customer' : 'New Customer';
-            const custSub    = orderCount>0 ? `${orderCount} past orders on record` : 'First-time enquiry';
-
-            // ── Call AerialEngine AI ─────────────────────────────────────────────
-            let reasoning = "Analyzing historical context and current market conditions...";
             try {
-                const aiRes = await fetch('/api/v1/analyze', {
+                const respPromise = fetch('/api/v1/analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        customer_id: selectedCustomer.customer_id || selectedCustomer.cliid || custInput,
-                        customer_name: selectedCustomer.name || selectedCustomer.cliname || custInput,
-                        product_type: prodType,
-                        product_code: size,
-                        quantity_mt: qty
-                    })
+                        customer_id: cust.id,
+                        product_id:  productId,
+                        quantity:    qty,
+                        payment_terms: payTerms,
+                        mode: mode,
+                    }),
                 });
-                if (aiRes.ok) {
-                    const aiData = await aiRes.json();
-                    reasoning = aiData.pricing_logic_explanation;
-                } else {
-                    reasoning = "AerialEngine is currently analyzing the market. (API Error)";
+
+                // Animate steps while request is in flight
+                await new Promise(r => setTimeout(r, 350));
+                steps[0].classList.replace('active', 'done'); steps[0].children[0].innerHTML = '✓';
+                steps[1].classList.add('active');
+                await new Promise(r => setTimeout(r, 350));
+                steps[1].classList.replace('active', 'done'); steps[1].children[0].innerHTML = '✓';
+                steps[2].classList.add('active');
+
+                const resp = await respPromise;
+                if (!resp.ok) {
+                    const detail = await resp.text();
+                    throw new Error(`API error ${resp.status}: ${detail}`);
+                }
+                const data = await resp.json();
+
+                steps[2].classList.replace('active', 'done'); steps[2].children[0].innerHTML = '✓';
+                await new Promise(r => setTimeout(r, 200));
+
+                renderResults(data);
+
+                loading.classList.replace('flex', 'hidden');
+                results.classList.remove('hidden');
+                results.style.display = 'flex';
+
+                if (window.innerWidth < 1024) {
+                    document.getElementById('formInner').classList.add('collapsed');
+                    const tBtn = document.getElementById('formToggleBtn');
+                    tBtn.classList.add('visible');
+                    tBtn.innerHTML = `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Edit Enquiry`;
+                    setTimeout(() => document.querySelector('.results-panel').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
                 }
             } catch (err) {
-                console.error("AerialEngine Error:", err);
-                reasoning = "AerialEngine offline. Using standard pricing heuristic.";
+                console.error(err);
+                loading.classList.replace('flex', 'hidden');
+                empty.classList.remove('hidden');
+                alert('Analysis failed: ' + err.message);
+            } finally {
+                algoBtn.disabled = false; aiBtn.disabled = false;
             }
-
-            // Market signals
-            const marketHigh = histRates.length ? Math.round(Math.max(...histRates)) : Math.round(ceil);
-            const marketLow  = histRates.length ? Math.round(Math.min(...histRates.filter(r=>r>floor))) : Math.round(floor*1.05);
-            
-            const signals = [
-                { c: totalFG>0?'green':'red',   t: totalFG>0 ? `${totalFG.toFixed(1)} ${unit} of ${size} ready for immediate dispatch` : `No FG stock available for ${size} — full production run required` },
-                { c: isRepeat?'green':'blue',    t: isRepeat ? `Strong relationship: ${orderCount} successful past orders` : 'New customer — using market baseline pricing' },
-                { c: 'amber',                    t: histRates.length>=2 ? `Historical price range (last ${histRes.data.length} quotes): ₹${marketLow.toLocaleString('en-IN')} – ₹${marketHigh.toLocaleString('en-IN')} / ${unit}` : `RM floor cost: ₹${floor.toLocaleString('en-IN')} / ${unit} (RM + conversion)` },
-                { c: avgUtil>80?'red':'green',   t: `Machine utilisation: ${avgUtil}% avg across ${machines.length||'—'} active lines` },
-            ];
-
-            // ── Render ────────────────────────────────────────────────────────────
-            const fmt = n => '₹' + Math.round(n).toLocaleString('en-IN');
-
-            document.getElementById('priceLow').innerText  = fmt(priceLow);
-            document.getElementById('priceHigh').innerText = fmt(priceHigh);
-            document.getElementById('lblFloor').innerText  = fmt(floor);
-            document.getElementById('lblCeil').innerText   = fmt(ceil);
-            document.getElementById('priceUnit').innerText = `per ${unit}`;
-
-            const range   = ceil - floor;
-            const lowPct  = Math.max(((priceLow-floor)/range)*100, 2);
-            const highPct = Math.min(((priceHigh-floor)/range)*100, 98);
-            document.getElementById('barFloor').style.width     = `${lowPct}%`;
-            document.getElementById('barSuggested').style.left  = `${lowPct}%`;
-            document.getElementById('barSuggested').style.width = `${Math.max(highPct-lowPct,2)}%`;
-
-            document.getElementById('contextCardsContainer').innerHTML = `
-                <div class="glass-card p-3 slide-up" style="grid-column:span 2">
-                    <p class="text-[10px] text-slate-400 uppercase mb-0.5">Customer</p>
-                    <p class="text-base font-bold truncate">${custStr}</p>
-                    <p class="text-[10px] text-slate-400 mt-1">${custSub}</p>
-                </div>
-                <div class="glass-card p-3 slide-up" style="animation-delay:0.05s">
-                    <p class="text-[10px] text-slate-400 uppercase mb-0.5">FG Stock</p>
-                    <p class="text-base font-bold">${fgText}</p>
-                    <p class="text-[10px] text-slate-400 mt-1 line-clamp-1">${fgSub}</p>
-                </div>
-                <div class="glass-card p-3 slide-up" style="animation-delay:0.1s">
-                    <p class="text-[10px] text-slate-400 uppercase mb-0.5">Machine Util.</p>
-                    <p class="text-base font-bold">${avgUtil}%</p>
-                    <p class="text-[10px] text-slate-400 mt-1 line-clamp-1">${utilSub}</p>
-                </div>
-                <div class="glass-card p-3 slide-up" style="animation-delay:0.15s">
-                    <p class="text-[10px] text-slate-400 uppercase mb-0.5">Est. Dispatch</p>
-                    <p class="text-base font-bold">${etaDays}</p>
-                    <p class="text-[10px] text-slate-400 mt-1 line-clamp-1">${etaSub}</p>
-                </div>
-                <div class="glass-card p-3 slide-up" style="animation-delay:0.2s;grid-column:span 2">
-                    <p class="text-[10px] text-slate-400 uppercase mb-0.5">RM Cost Baseline</p>
-                    <p class="text-base font-bold">${fmt(rmCost)}/${unit}</p>
-                    <p class="text-[10px] text-slate-400 mt-1 line-clamp-1">${rmVendor}</p>
-                </div>`;
-
-            document.getElementById('marketSignalsContainer').innerHTML = signals.map(s =>
-                `<div class="flex items-start gap-3"><div class="dot ${s.c}"></div><p class="text-[11px] md:text-xs text-slate-300 leading-relaxed">${s.t}</p></div>`
-            ).join('');
-
-            // Quote History from real data
-            const histRows = (histRes.data||[]).slice(0,6);
-            if (histRows.length > 0) {
-                document.getElementById('historyContainer').innerHTML = histRows.map((h,i) => `
-                    <tr class="${i<histRows.length-1?'border-b border-slate-700/30':''}">
-                        <td class="py-2 text-slate-300 whitespace-nowrap">${h.quote_date ? new Date(h.quote_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'}) : '—'}</td>
-                        <td class="py-2 text-right text-white font-medium">${fmt(h.unit_rate_inr)}</td>
-                        <td class="py-2 text-center whitespace-nowrap">
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-medium border ${h.outcome==='won'?'bg-emerald-500/10 text-emerald-400 border-emerald-500/30':h.outcome==='lost'?'bg-rose-500/10 text-rose-400 border-rose-500/30':'bg-slate-500/10 text-slate-400 border-slate-500/30'}">
-                                ${h.outcome==='won'?'✓ Won':h.outcome==='lost'?'✗ Lost':'⏳ Open'}
-                            </span>
-                        </td>
-                    </tr>`).join('');
-            } else {
-                document.getElementById('historyContainer').innerHTML = `<tr><td colspan="3" class="py-4 text-center text-slate-500 text-xs">No historical data for this product yet</td></tr>`;
-            }
-
-            // Typewriter reasoning
-            const rElem = document.getElementById('aiReasoning');
-            rElem.innerHTML = '';
-            let charIdx = 0;
-            const typeInterval = setInterval(() => {
-                rElem.innerHTML = reasoning.substring(0, charIdx) + '<span class="inline-block w-1 h-3 md:h-4 bg-indigo-400 ml-1 animate-pulse align-middle"></span>';
-                charIdx += 2;
-                if (charIdx > reasoning.length) {
-                    clearInterval(typeInterval);
-                    rElem.innerHTML = reasoning;
-                }
-            }, 10);
-
-            btn.disabled = false;
         }
 
-        // ── Boot ─────────────────────────────────────────────────────────────────
-        initDashboard();
+        // ── Render ───────────────────────────────────────────────────────────
+        function fmtINR(n) { return '₹' + Math.round(n).toLocaleString('en-IN'); }
+        function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+        function renderResults(d) {
+            const pr = d.price_range;
+            const isAi = d.mode_used === 'ai';
+
+            document.getElementById('resultCardTitle').textContent = isAi ? 'AI Suggested Price' : 'Algo Suggested Price';
+            const badge = document.getElementById('resultCardBadge');
+            badge.textContent = isAi ? 'AI MODE' : 'ALGO MODE';
+            badge.className = 'ml-auto text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ' + (isAi
+                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20');
+
+            const hasPrice = pr && pr.suggested_low != null && pr.suggested_high != null;
+            document.getElementById('priceLow').textContent  = hasPrice ? fmtINR(pr.suggested_low)  : '—';
+            document.getElementById('priceHigh').textContent = hasPrice ? fmtINR(pr.suggested_high) : '—';
+            document.getElementById('priceUnit').textContent = `per ${(pr && pr.unit) || 'MT'}`;
+
+            // Market band labels
+            document.getElementById('lblFloor').textContent  = pr && pr.market_low    ? fmtINR(pr.market_low)    : '—';
+            document.getElementById('lblMedian').textContent = pr && pr.market_median ? fmtINR(pr.market_median) : '—';
+            document.getElementById('lblCeil').textContent   = pr && pr.market_high   ? fmtINR(pr.market_high)   : '—';
+            document.getElementById('lblSampleSize').textContent =
+                pr && pr.sample_size ? `Based on ${pr.sample_size} won deal(s)` : 'Insufficient market history';
+
+            // Position the suggested band relative to market low/high
+            if (hasPrice && pr.market_low && pr.market_high && pr.market_high > pr.market_low) {
+                const range = pr.market_high - pr.market_low;
+                const lowPct  = Math.max(((pr.suggested_low  - pr.market_low) / range) * 100, 0);
+                const highPct = Math.min(((pr.suggested_high - pr.market_low) / range) * 100, 100);
+                document.getElementById('barFloor').style.width     = '0%';
+                document.getElementById('barSuggested').style.left  = `${lowPct}%`;
+                document.getElementById('barSuggested').style.width = `${Math.max(highPct - lowPct, 2)}%`;
+            } else {
+                document.getElementById('barFloor').style.width     = '0%';
+                document.getElementById('barSuggested').style.left  = '0%';
+                document.getElementById('barSuggested').style.width = '0%';
+            }
+
+            // Context cards — first one spans 2 columns, last one spans 2 columns
+            const cards = d.context_cards || [];
+            document.getElementById('contextCardsContainer').innerHTML = cards.map((c, i) => {
+                const span = (i === 0 || i === cards.length - 1) ? 'style="grid-column: span 2"' : `style="animation-delay: ${i * 0.05}s"`;
+                return `<div class="glass-card p-3 slide-up" ${span}>
+                    <p class="text-[10px] text-slate-400 uppercase mb-0.5">${escapeHtml(c.label)}</p>
+                    <p class="text-base font-bold truncate">${escapeHtml(c.value)}</p>
+                    <p class="text-[10px] text-slate-400 mt-1 line-clamp-2">${escapeHtml(c.sub_text)}</p>
+                </div>`;
+            }).join('');
+
+            document.getElementById('marketSignalsContainer').innerHTML = (d.market_signals || []).map(s =>
+                `<div class="flex items-start gap-3"><div class="dot ${s.color}"></div><p class="text-[11px] md:text-xs text-slate-300 leading-relaxed">${escapeHtml(s.text)}</p></div>`
+            ).join('');
+
+            renderHistoryTable('marketHistoryBody',   d.market_history,   ['date', 'customer_name', 'rate', 'outcome']);
+            renderHistoryTable('customerHistoryBody', d.customer_history, ['date', 'product_label', 'rate', 'outcome']);
+            renderHistoryTable('inquiryHistoryBody',  d.inquiry_history,  ['enquiry_no', 'date', 'customer_name', 'rate', 'outcome']);
+
+            // Reasoning typewriter
+            const r = document.getElementById('aiReasoning');
+            r.innerHTML = '';
+            const text = d.reasoning || '';
+            let i = 0;
+            const interval = setInterval(() => {
+                r.innerHTML = escapeHtml(text.substring(0, i)) + '<span class="inline-block w-1 h-3 md:h-4 bg-indigo-400 ml-1 animate-pulse align-middle"></span>';
+                i += 3;
+                if (i > text.length) { clearInterval(interval); r.textContent = text; }
+            }, 12);
+        }
+
+        function renderHistoryTable(bodyId, rows, cols) {
+            const body = document.getElementById(bodyId);
+            if (!rows || rows.length === 0) {
+                body.innerHTML = `<tr><td colspan="${cols.length}" class="py-4 text-center text-slate-500 text-xs">No data</td></tr>`;
+                return;
+            }
+            body.innerHTML = rows.slice(0, 8).map((row, i) => {
+                const last = i === Math.min(rows.length, 8) - 1;
+                const refs = refsHtml(row);
+                const tds = cols.map(c => {
+                    if (c === 'date') {
+                        const d = row.date ? new Date(row.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : '—';
+                        return `<td class="py-2 align-top text-slate-300 whitespace-nowrap">${d}</td>`;
+                    }
+                    if (c === 'enquiry_no') return `<td class="py-2 align-top text-indigo-300 font-mono text-[11px] whitespace-nowrap" title="${escapeHtml(row.enquiry_no || '')}">${escapeHtml(row.enquiry_no || '—')}</td>`;
+                    if (c === 'customer_name') return `<td class="py-2 align-top text-slate-300 max-w-[160px]"><div class="truncate" title="${escapeHtml(row.customer_name || '')}">${escapeHtml(row.customer_name || '—')}</div>${refs}</td>`;
+                    if (c === 'product_label') return `<td class="py-2 align-top text-slate-300 max-w-[180px]"><div class="truncate" title="${escapeHtml(row.product_label || '')}">${escapeHtml(row.product_label || '—')}</div>${refs}</td>`;
+                    if (c === 'rate') return `<td class="py-2 align-top text-right text-white font-medium">${row.rate ? fmtINR(row.rate) : '—'}</td>`;
+                    if (c === 'outcome') {
+                        const map = {
+                            won:         { cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30', label: '✓ Won' },
+                            lost:        { cls: 'bg-rose-500/10 text-rose-400 border-rose-500/30',           label: '✗ Lost' },
+                            in_progress: { cls: 'bg-amber-500/10 text-amber-400 border-amber-500/30',        label: '⚙ In Progress' },
+                            open:        { cls: 'bg-slate-500/10 text-slate-400 border-slate-500/30',        label: '⏳ Open' },
+                        };
+                        const m = map[row.outcome] || map.open;
+                        return `<td class="py-2 align-top text-right whitespace-nowrap"><span class="px-2 py-0.5 rounded-full text-[10px] font-medium border ${m.cls}">${m.label}</span></td>`;
+                    }
+                    return `<td class="py-2 align-top text-slate-300">${escapeHtml(row[c] ?? '—')}</td>`;
+                }).join('');
+                return `<tr class="${last ? '' : 'border-b border-slate-700/30'}">${tds}</tr>`;
+            }).join('');
+        }
+
+        // Render reference numbers (invoice / SO) as a compact second line under the main cell.
+        // Skips any field that's missing — won't show clutter when nothing is available.
+        // (Enquiry # is now its own column on the inquiry table, so we don't repeat it here.)
+        function refsHtml(row) {
+            const parts = [];
+            if (row.invoice_no) parts.push(`<span class="text-emerald-400/80" title="Invoice number">INV ${escapeHtml(row.invoice_no)}</span>`);
+            if (row.so_no)      parts.push(`<span class="text-amber-400/80"  title="Sales order">SO ${escapeHtml(row.so_no)}</span>`);
+            if (parts.length === 0) return '';
+            return `<div class="text-[10px] text-slate-500 mt-0.5 truncate">${parts.join(' · ')}</div>`;
+        }
+
+        init();
     </script>
 </body>
 </html>

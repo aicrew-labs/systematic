@@ -1,21 +1,40 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from typing import List
+"""
+Quote Intelligence API — Path 2 (single source of truth).
+Frontend speaks only to FastAPI; FastAPI speaks only to Supabase.
+"""
+from __future__ import annotations
 import os
+from typing import List
 
-from app.schemas import CustomerInfo, ProductInfo, DailyRatesInput, QuoteRequest, QuoteResponse
-from app.database import get_customers, get_products, get_daily_rates, update_daily_rates
-from app.pricing_engine import calculate_quote
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
-app = FastAPI(
-    title="Systematic Quote Intelligence API",
-    description="Backend API for real-time GI Wire pricing, utilizing ERP data.",
-    version="1.0.0"
+from app.database import (
+    get_daily_rates,
+    insert_daily_rates,
+    list_customers,
+    list_products,
+)
+from app.pricing_engine import analyze
+from app.schemas import (
+    AnalyzeRequest,
+    AnalyzeResponse,
+    CustomerInfo,
+    DailyRatesInput,
+    DailyRatesOut,
+    ProductGroup,
+    ProductSize,
 )
 
-# CORS — allow Railway frontend domain + local dev
+
+app = FastAPI(
+    title="Quote Intelligence API",
+    description="Backend for Systematic Industries dashboard.",
+    version="2.0.0",
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,51 +43,80 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Serve static HTML dashboard ─────────────────────────────────────────────
-# In production (Railway) the HTML lives one level up from backend/
-STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "static")
-if os.path.isdir(STATIC_DIR):
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+# ── Static dashboard ───────────────────────────────────────────────────────
+# /static/* serves any asset; / serves index.html.
+_HERE = os.path.dirname(__file__)
+_STATIC_DIR = os.path.normpath(os.path.join(_HERE, "..", "..", "static"))
+if os.path.isdir(_STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+
 
 @app.get("/", include_in_schema=False)
 def serve_dashboard():
-    """Serve the Quote Intelligence dashboard HTML."""
-    html_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "static", "index.html")
+    html_path = os.path.join(_STATIC_DIR, "index.html")
     if os.path.exists(html_path):
         return FileResponse(html_path)
     return {"status": "ok", "message": "Quote Intelligence API — dashboard not found in /static"}
 
-# ── API routes ───────────────────────────────────────────────────────────────
+
+# ── Health ─────────────────────────────────────────────────────────────────
 
 @app.get("/health")
-def health_check():
-    return {"status": "ok", "message": "Quote Intelligence Backend is running!"}
+def health():
+    return {"status": "ok", "service": "Quote Intelligence", "version": "2.0.0"}
+
+
+# ── Read-only listings ─────────────────────────────────────────────────────
 
 @app.get("/api/v1/customers", response_model=List[CustomerInfo])
-def get_all_customers():
-    """Returns the list of customers loaded from the ERP JSON data."""
-    return get_customers()
+def get_customers():
+    return [
+        CustomerInfo(
+            id=int(c["id"]),
+            name=c["name"],
+            total_orders=int(c.get("total_orders") or 0),
+            is_repeat=bool(c.get("is_repeat")),
+        )
+        for c in list_customers()
+        if c.get("id") and c.get("name")
+    ]
 
-@app.get("/api/v1/products", response_model=List[ProductInfo])
-def get_all_products():
-    """Returns the list of products (derived from RMS specs)."""
-    return get_products()
 
-@app.get("/api/v1/rates")
-def get_current_rates():
-    """Get the current daily raw material rates."""
-    return get_daily_rates()
+@app.get("/api/v1/products", response_model=List[ProductGroup])
+def get_products():
+    """Returns products grouped by product_type for the UI dropdown."""
+    grouped: dict[str, list[ProductSize]] = {}
+    for p in list_products():
+        ptype = (p.get("product_type") or "").strip() or "Other"
+        grouped.setdefault(ptype, []).append(ProductSize(
+            id=int(p["id"]),
+            size_label=p.get("size_label") or "—",
+            size_mm=p.get("size_mm"),
+            unit_of_measure=p.get("unit_of_measure") or "MT",
+        ))
+    return [ProductGroup(product_type=t, sizes=sizes)
+            for t, sizes in sorted(grouped.items())]
 
-@app.post("/api/v1/rates")
-def set_daily_rates(rates: DailyRatesInput):
-    """Admin endpoint to update the daily RM rates."""
-    updated = update_daily_rates(rates.model_dump())
-    return {"status": "success", "rates": updated}
 
-@app.post("/api/v1/analyze", response_model=QuoteResponse)
-def analyze_quote(request: QuoteRequest):
+@app.get("/api/v1/rates", response_model=DailyRatesOut)
+def get_rates():
+    return DailyRatesOut(**get_daily_rates())
+
+
+@app.post("/api/v1/rates", response_model=DailyRatesOut)
+def set_rates(rates: DailyRatesInput):
+    return DailyRatesOut(**insert_daily_rates(rates.model_dump()))
+
+
+# ── Single bundled analyzer ────────────────────────────────────────────────
+
+@app.post("/api/v1/analyze", response_model=AnalyzeResponse)
+def analyze_quote(req: AnalyzeRequest):
     """
-    The core Quote Intelligence engine.
-    Calculates costs, historical context, and provides pricing recommendations.
+    One endpoint, both modes. `mode='algo'` (default) is free; `mode='ai'` calls OpenAI.
+    Returns the full bundle: prices, context, signals, three history tables, reasoning.
     """
-    return calculate_quote(request)
+    try:
+        return analyze(req)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))

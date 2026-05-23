@@ -1,31 +1,46 @@
 -- ============================================================
--- Quote Intelligence — Supabase PostgreSQL Schema (v2)
--- Full ERP-synced schema with proper foreign keys
+-- Migration 002: Full ERP-synced Schema
+-- DROP old tables, CREATE new ones with proper FK relationships
 -- Run in: Supabase Dashboard → SQL Editor → New Query
+-- ⚠️  THIS WILL DELETE ALL EXISTING DATA — run on a fresh start
 -- ============================================================
 
--- ── 1. PRODUCTS (Master — from ERP RMS module) ──────────────
--- PK = ERP RMS order_id (INTEGER, authoritative)
-CREATE TABLE IF NOT EXISTS products (
-    id              INTEGER PRIMARY KEY,          -- ERP RMS order_id
+-- Step 1: Drop old tables in dependency order
+DROP TABLE IF EXISTS quote_history      CASCADE;
+DROP TABLE IF EXISTS enquiries          CASCADE;
+DROP TABLE IF EXISTS fg_inventory       CASCADE;
+DROP TABLE IF EXISTS machines           CASCADE;
+DROP TABLE IF EXISTS customers          CASCADE;
+DROP TABLE IF EXISTS products           CASCADE;
+
+-- Drop new tables if they exist from a partial run
+DROP TABLE IF EXISTS invoices           CASCADE;
+DROP TABLE IF EXISTS sales_orders       CASCADE;
+DROP TABLE IF EXISTS manufacturing_units CASCADE;
+DROP TABLE IF EXISTS rm_prices          CASCADE;
+DROP TABLE IF EXISTS daily_rates        CASCADE;
+
+-- Step 2: Create all tables fresh (paste supabase_schema.sql here)
+-- ── 1. PRODUCTS ──────────────────────────────────────────────
+CREATE TABLE products (
+    id              INTEGER PRIMARY KEY,
     product_type    VARCHAR(100) NOT NULL,
     size_mm         FLOAT,
     size_label      VARCHAR(200) NOT NULL,
     grade           VARCHAR(50),
-    unit_of_measure VARCHAR(10) NOT NULL DEFAULT 'MT',
+    unit_of_measure VARCHAR(10)  NOT NULL DEFAULT 'MT',
     display_name    VARCHAR(200) NOT NULL,
     hsn_code        VARCHAR(20),
-    gst_pct         FLOAT NOT NULL DEFAULT 18.0,
-    is_active       BOOLEAN NOT NULL DEFAULT TRUE
+    gst_pct         FLOAT        NOT NULL DEFAULT 18.0,
+    is_active       BOOLEAN      NOT NULL DEFAULT TRUE
 );
 
--- ── 2. CUSTOMERS (Master — from ERP customer module) ─────────
--- PK = ERP customer_id (INTEGER, authoritative)
-CREATE TABLE IF NOT EXISTS customers (
-    id                 INTEGER PRIMARY KEY,        -- ERP customer_id
+-- ── 2. CUSTOMERS ─────────────────────────────────────────────
+CREATE TABLE customers (
+    id                 INTEGER PRIMARY KEY,
     name               VARCHAR(200) NOT NULL UNIQUE,
     phone              VARCHAR(50),
-    company_id         INTEGER,                    -- ERP company/billing unit id
+    company_id         INTEGER,
     total_orders       INTEGER NOT NULL DEFAULT 0,
     total_qty_mt       FLOAT   NOT NULL DEFAULT 0.0,
     dispatched_qty_mt  FLOAT   NOT NULL DEFAULT 0.0,
@@ -34,55 +49,50 @@ CREATE TABLE IF NOT EXISTS customers (
 );
 
 -- ── 3. MANUFACTURING UNITS ───────────────────────────────────
--- Internal master for Sayli, Veritas Unit 1/2/3/4, etc.
-CREATE TABLE IF NOT EXISTS manufacturing_units (
+CREATE TABLE manufacturing_units (
     id            SERIAL PRIMARY KEY,
-    name          VARCHAR(100) NOT NULL UNIQUE,   -- 'Sayli', 'Veritas Unit 1' …
-    billing_code  VARCHAR(20),                    -- ERP billing code: SIL, VIPL, SIGM, WBIPL
+    name          VARCHAR(100) NOT NULL UNIQUE,
+    billing_code  VARCHAR(20),
     location      VARCHAR(200)
 );
 
--- ── 4. ENQUIRIES (from ERP CRM — one row per line item) ──────
--- erp_id = ERP enquiry_no (e.g. CRM/26-27/EQ/0157), UNIQUE per enquiry
--- One enquiry_no can have multiple product lines → separate rows
-CREATE TABLE IF NOT EXISTS enquiries (
+-- ── 4. ENQUIRIES ─────────────────────────────────────────────
+CREATE TABLE enquiries (
     id              SERIAL PRIMARY KEY,
-    erp_id          VARCHAR(100),                 -- ERP enquiry_no (not PK — one enquiry = N rows)
+    erp_id          VARCHAR(100),
     enquiry_date    DATE,
     customer_id     INTEGER REFERENCES customers(id) ON DELETE SET NULL,
-    customer_name   VARCHAR(200),                 -- fallback when no customer FK
+    customer_name   VARCHAR(200),
     product_id      INTEGER REFERENCES products(id) ON DELETE SET NULL,
-    product_desc    TEXT,                         -- raw ERP specification text
-    prod_category   VARCHAR(100),                 -- ERP prod_categ
+    product_desc    TEXT,
+    prod_category   VARCHAR(100),
     quantity        FLOAT,
     unit            VARCHAR(20),
     price_offered   FLOAT,
     target_price    FLOAT,
     status          VARCHAR(50),
     sales_rep       VARCHAR(100),
-    source          VARCHAR(100),                 -- 'Cold Calling', 'Website Enquiry' …
-    cust_type       VARCHAR(50),                  -- 'New', 'Existing'
+    source          VARCHAR(100),
+    cust_type       VARCHAR(50),
     remarks         TEXT,
-    raw_data        JSONB                         -- full original ERP row
+    raw_data        JSONB
 );
-CREATE INDEX IF NOT EXISTS idx_enquiries_erp_id     ON enquiries(erp_id);
-CREATE INDEX IF NOT EXISTS idx_enquiries_customer_id ON enquiries(customer_id);
-CREATE INDEX IF NOT EXISTS idx_enquiries_product_id  ON enquiries(product_id);
-CREATE INDEX IF NOT EXISTS idx_enquiries_date        ON enquiries(enquiry_date);
+CREATE INDEX idx_enquiries_erp_id      ON enquiries(erp_id);
+CREATE INDEX idx_enquiries_customer_id ON enquiries(customer_id);
+CREATE INDEX idx_enquiries_product_id  ON enquiries(product_id);
+CREATE INDEX idx_enquiries_date        ON enquiries(enquiry_date);
 
--- ── 5. SALES ORDERS (ERP Sales Orders — one row per line item) ─
--- erp_so_no = ERP so_number (e.g. SO/26-27/00296)
--- enquiry_id links back to the originating enquiry (erp_id)
-CREATE TABLE IF NOT EXISTS sales_orders (
+-- ── 5. SALES ORDERS ──────────────────────────────────────────
+CREATE TABLE sales_orders (
     id              SERIAL PRIMARY KEY,
-    erp_so_no       VARCHAR(50) NOT NULL,         -- ERP so_number
-    erp_do_no       VARCHAR(50),                  -- ERP delivery order number
-    erp_enquiry_id  VARCHAR(100),                 -- FK ref to enquiries.erp_id
+    erp_so_no       VARCHAR(50) NOT NULL,
+    erp_do_no       VARCHAR(50),
+    erp_enquiry_id  VARCHAR(100),
     order_date      DATE,
     customer_id     INTEGER REFERENCES customers(id) ON DELETE SET NULL,
-    customer_name   VARCHAR(200),                 -- fallback
+    customer_name   VARCHAR(200),
     product_id      INTEGER REFERENCES products(id) ON DELETE SET NULL,
-    prod_code       VARCHAR(200),                 -- ERP display text (fallback)
+    prod_code       VARCHAR(200),
     quantity        FLOAT,
     pending_qty     FLOAT,
     dispatched_qty  FLOAT,
@@ -97,26 +107,23 @@ CREATE TABLE IF NOT EXISTS sales_orders (
     status          VARCHAR(50),
     sales_rep       VARCHAR(100)
 );
-CREATE INDEX IF NOT EXISTS idx_so_erp_so_no      ON sales_orders(erp_so_no);
-CREATE INDEX IF NOT EXISTS idx_so_customer_id    ON sales_orders(customer_id);
-CREATE INDEX IF NOT EXISTS idx_so_product_id     ON sales_orders(product_id);
-CREATE INDEX IF NOT EXISTS idx_so_enquiry_id     ON sales_orders(erp_enquiry_id);
+CREATE INDEX idx_so_erp_so_no    ON sales_orders(erp_so_no);
+CREATE INDEX idx_so_customer_id  ON sales_orders(customer_id);
+CREATE INDEX idx_so_product_id   ON sales_orders(product_id);
 
--- ── 6. INVOICES (ERP Invoices — one row per line item) ───────
--- erp_invoice_id = ERP invoice_id (one invoice = multiple line rows)
--- erp_so_no links back to sales_orders
-CREATE TABLE IF NOT EXISTS invoices (
+-- ── 6. INVOICES ───────────────────────────────────────────────
+CREATE TABLE invoices (
     id                SERIAL PRIMARY KEY,
-    erp_invoice_id    VARCHAR(50) NOT NULL,       -- ERP invoice_id (not unique per row)
-    erp_inv_nos       VARCHAR(50),                -- human-readable invoice number e.g. VIPL/187/27
-    erp_so_no         VARCHAR(50),                -- FK ref to sales_orders.erp_so_no
+    erp_invoice_id    VARCHAR(50) NOT NULL,
+    erp_inv_nos       VARCHAR(50),
+    erp_so_no         VARCHAR(50),
     erp_do_no         VARCHAR(50),
     invoice_date      DATE,
     due_date          DATE,
     customer_id       INTEGER REFERENCES customers(id) ON DELETE SET NULL,
-    customer_name     VARCHAR(200),               -- fallback
+    customer_name     VARCHAR(200),
     product_id        INTEGER REFERENCES products(id) ON DELETE SET NULL,
-    prod_code         VARCHAR(200),               -- ERP display text (fallback)
+    prod_code         VARCHAR(200),
     quantity          FLOAT,
     unit              VARCHAR(20),
     unit_rate         FLOAT,
@@ -135,65 +142,65 @@ CREATE TABLE IF NOT EXISTS invoices (
     prod_total        FLOAT,
     total_amount      FLOAT,
     sales_rep         VARCHAR(100),
-    outcome           VARCHAR(20) DEFAULT 'won'   -- 'won', 'pending', 'lost'
+    outcome           VARCHAR(20) DEFAULT 'won'
 );
-CREATE INDEX IF NOT EXISTS idx_inv_erp_invoice_id ON invoices(erp_invoice_id);
-CREATE INDEX IF NOT EXISTS idx_inv_customer_id    ON invoices(customer_id);
-CREATE INDEX IF NOT EXISTS idx_inv_product_id     ON invoices(product_id);
-CREATE INDEX IF NOT EXISTS idx_inv_so_no          ON invoices(erp_so_no);
-CREATE INDEX IF NOT EXISTS idx_inv_date           ON invoices(invoice_date);
+CREATE INDEX idx_inv_erp_invoice_id ON invoices(erp_invoice_id);
+CREATE INDEX idx_inv_customer_id    ON invoices(customer_id);
+CREATE INDEX idx_inv_product_id     ON invoices(product_id);
+CREATE INDEX idx_inv_so_no          ON invoices(erp_so_no);
+CREATE INDEX idx_inv_date           ON invoices(invoice_date);
 
 -- ── 7. FG INVENTORY ──────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS fg_inventory (
+CREATE TABLE fg_inventory (
     id              SERIAL PRIMARY KEY,
     snapshot_date   DATE NOT NULL,
     unit_id         INTEGER REFERENCES manufacturing_units(id) ON DELETE SET NULL,
-    unit_name       VARCHAR(100),                 -- fallback text
+    unit_name       VARCHAR(100),
     product_id      INTEGER REFERENCES products(id) ON DELETE SET NULL,
-    product_type    VARCHAR(100),                 -- fallback text
-    size_label      VARCHAR(100),                 -- fallback text
-    quantity_mt     FLOAT NOT NULL DEFAULT 0.0,
-    inventory_type  VARCHAR(50) NOT NULL DEFAULT 'FG'  -- 'FG', 'B_Grade', 'Non_Moving', 'WIP'
+    product_type    VARCHAR(100),
+    size_label      VARCHAR(100),
+    quantity_mt     FLOAT   NOT NULL DEFAULT 0.0,
+    inventory_type  VARCHAR(50) NOT NULL DEFAULT 'FG'
 );
-CREATE INDEX IF NOT EXISTS idx_fg_product_id ON fg_inventory(product_id);
-CREATE INDEX IF NOT EXISTS idx_fg_unit_id    ON fg_inventory(unit_id);
+CREATE INDEX idx_fg_product_id ON fg_inventory(product_id);
+CREATE INDEX idx_fg_unit_id    ON fg_inventory(unit_id);
 
 -- ── 8. MACHINES ───────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS machines (
+CREATE TABLE machines (
     id                       SERIAL PRIMARY KEY,
     unit_id                  INTEGER REFERENCES manufacturing_units(id) ON DELETE SET NULL,
-    unit_name                VARCHAR(100),         -- fallback text
+    unit_name                VARCHAR(100),
     machine_code             VARCHAR(50) NOT NULL,
     machine_type             VARCHAR(50) NOT NULL,
     min_dia_mm               FLOAT,
     max_dia_mm               FLOAT,
     capacity_mt_per_day      FLOAT,
-    current_utilisation_pct  FLOAT NOT NULL DEFAULT 0.0,
+    current_utilisation_pct  FLOAT   NOT NULL DEFAULT 0.0,
     active                   BOOLEAN NOT NULL DEFAULT TRUE
 );
 
--- ── 9. RM PRICES (standalone) ────────────────────────────────
-CREATE TABLE IF NOT EXISTS rm_prices (
+-- ── 9. RM PRICES ─────────────────────────────────────────────
+CREATE TABLE rm_prices (
     id                SERIAL PRIMARY KEY,
     vendor_name       VARCHAR(100) NOT NULL,
     rm_size_mm        FLOAT NOT NULL,
-    rm_grade          VARCHAR(50) NOT NULL,
+    rm_grade          VARCHAR(50)  NOT NULL,
     rate_per_mt_inr   FLOAT NOT NULL,
-    effective_date    DATE NOT NULL
+    effective_date    DATE  NOT NULL
 );
 
--- ── 10. DAILY RATES (standalone user input) ──────────────────
-CREATE TABLE IF NOT EXISTS daily_rates (
+-- ── 10. DAILY RATES ──────────────────────────────────────────
+CREATE TABLE daily_rates (
     id              SERIAL PRIMARY KEY,
-    rate_date       DATE NOT NULL DEFAULT CURRENT_DATE,
-    ms_steel_rate   FLOAT NOT NULL,
-    hc_steel_rate   FLOAT NOT NULL,
-    zinc_rate       FLOAT NOT NULL,
+    rate_date       DATE        NOT NULL DEFAULT CURRENT_DATE,
+    ms_steel_rate   FLOAT       NOT NULL,
+    hc_steel_rate   FLOAT       NOT NULL,
+    zinc_rate       FLOAT       NOT NULL,
     entered_by      VARCHAR(100),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ── Row Level Security ───────────────────────────────────────
+-- ── RLS ──────────────────────────────────────────────────────
 ALTER TABLE products             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customers            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE manufacturing_units  ENABLE ROW LEVEL SECURITY;
@@ -205,7 +212,6 @@ ALTER TABLE machines             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rm_prices            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE daily_rates          ENABLE ROW LEVEL SECURITY;
 
--- ── Public Read Policies ─────────────────────────────────────
 CREATE POLICY "public_read_products"            ON products            FOR SELECT USING (true);
 CREATE POLICY "public_read_customers"           ON customers           FOR SELECT USING (true);
 CREATE POLICY "public_read_manufacturing_units" ON manufacturing_units FOR SELECT USING (true);
@@ -218,4 +224,4 @@ CREATE POLICY "public_read_rm_prices"           ON rm_prices           FOR SELEC
 CREATE POLICY "public_read_daily_rates"         ON daily_rates         FOR SELECT USING (true);
 CREATE POLICY "public_insert_daily_rates"       ON daily_rates         FOR INSERT WITH CHECK (true);
 
-SELECT 'Schema v2 created successfully!' AS status;
+SELECT 'Migration 002 complete — schema v2 ready!' AS status;
