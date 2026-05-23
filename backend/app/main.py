@@ -66,6 +66,37 @@ def health():
     return {"status": "ok", "service": "Quote Intelligence", "version": "2.0.0"}
 
 
+@app.get("/api/v1/_diagnose", include_in_schema=False)
+def diagnose():
+    """
+    Temporary endpoint for debugging Railway connectivity.
+    Returns whether Supabase env vars are present and whether a trivial
+    query succeeds. Safe to call: returns no row data.
+    """
+    import os
+    from app.database import supabase
+
+    info: dict = {
+        "has_url":     bool(os.getenv("SUPABASE_URL")),
+        "url_prefix":  (os.getenv("SUPABASE_URL") or "")[:30],
+        "has_key":     bool(os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_ANON_KEY")),
+        "key_length":  len(os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_ANON_KEY") or ""),
+        "client_init": supabase is not None,
+    }
+    if supabase is None:
+        info["error"] = "Supabase client failed to initialise"
+        return info
+    try:
+        res = supabase.table("customers").select("id").limit(1).execute()
+        info["query_ok"]   = True
+        info["row_count"]  = len(res.data or [])
+    except Exception as e:
+        info["query_ok"]    = False
+        info["error_type"]  = type(e).__name__
+        info["error_msg"]   = str(e)[:300]
+    return info
+
+
 # ── Read-only listings ─────────────────────────────────────────────────────
 
 @app.get("/api/v1/customers", response_model=List[CustomerInfo])
