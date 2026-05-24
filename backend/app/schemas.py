@@ -32,6 +32,7 @@ class DailyRatesOut(BaseModel):
     ms_steel_rate: float
     hc_steel_rate: float
     zinc_rate: float
+    rate_date: Optional[str] = None   # ISO date of the latest entry e.g. '2026-05-24'
 
 
 class DailyRatesInput(BaseModel):

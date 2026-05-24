@@ -249,38 +249,64 @@ DEFAULT_RATES = {
 
 def get_daily_rates() -> dict:
     if not supabase:
-        return dict(DEFAULT_RATES)
+        return dict(DEFAULT_RATES, rate_date=None)
     try:
         res = (
             supabase.table("daily_rates")
-            .select("ms_steel_rate, hc_steel_rate, zinc_rate")
+            .select("ms_steel_rate, hc_steel_rate, zinc_rate, rate_date")
             .order("rate_date", desc=True)
             .order("created_at", desc=True)
             .limit(1)
             .execute()
         )
         if res.data:
+            row = res.data[0]
             return {
-                "ms_steel_rate": float(res.data[0]["ms_steel_rate"]),
-                "hc_steel_rate": float(res.data[0]["hc_steel_rate"]),
-                "zinc_rate":     float(res.data[0]["zinc_rate"]),
+                "ms_steel_rate": float(row["ms_steel_rate"]),
+                "hc_steel_rate": float(row["hc_steel_rate"]),
+                "zinc_rate":     float(row["zinc_rate"]),
+                "rate_date":     str(row["rate_date"]) if row.get("rate_date") else None,
             }
     except Exception as e:
         print(f"Error fetching daily_rates: {e}")
-    return dict(DEFAULT_RATES)
+    return dict(DEFAULT_RATES, rate_date=None)
 
 
 def insert_daily_rates(rates: dict[str, Any]) -> dict:
+    """Upsert daily rates: update today's row if it exists, otherwise insert."""
     if not supabase:
         return rates
-    row = {
-        "ms_steel_rate": float(rates["ms_steel_rate"]),
-        "hc_steel_rate": float(rates["hc_steel_rate"]),
-        "zinc_rate":     float(rates["zinc_rate"]),
-        "entered_by":    "FastAPI Backend",
-    }
+    from datetime import date as _date
+    today = _date.today().isoformat()
+    ms   = float(rates["ms_steel_rate"])
+    hc   = float(rates["hc_steel_rate"])
+    zinc = float(rates["zinc_rate"])
     try:
-        supabase.table("daily_rates").insert(row).execute()
+        # Check if a row already exists for today
+        existing = (
+            supabase.table("daily_rates")
+            .select("id")
+            .eq("rate_date", today)
+            .limit(1)
+            .execute()
+        )
+        if existing.data:
+            # Update the existing row
+            supabase.table("daily_rates").update({
+                "ms_steel_rate": ms,
+                "hc_steel_rate": hc,
+                "zinc_rate":     zinc,
+                "entered_by":    "Dashboard",
+            }).eq("rate_date", today).execute()
+        else:
+            # Insert a new row for today
+            supabase.table("daily_rates").insert({
+                "rate_date":     today,
+                "ms_steel_rate": ms,
+                "hc_steel_rate": hc,
+                "zinc_rate":     zinc,
+                "entered_by":    "Dashboard",
+            }).execute()
     except Exception as e:
-        print(f"Error inserting daily_rates: {e}")
+        print(f"Error upserting daily_rates: {e}")
     return get_daily_rates()
