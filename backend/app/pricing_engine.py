@@ -28,6 +28,8 @@ from app.database import (
     invoices_for_customer,
     invoices_for_product,
     sales_order_lookup_for_product,
+    get_daily_rates,
+    get_product_cost_config,
 )
 from app.schemas import (
     AnalyzeRequest,
@@ -245,6 +247,39 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
         unit=unit,
     )
 
+    # ── 6a. Compute Floor Cost ──────────────────────────────────────────────
+    cat_code = product.get("cost_category_code") if product else None
+    config = get_product_cost_config(cat_code) if cat_code else None
+    rates = get_daily_rates()
+    
+    floor_val = "N/A"
+    floor_sub = "Configuration missing or inactive"
+    
+    if config:
+        msRate = float(rates.get("ms_steel_rate", 0))
+        hcRate = float(rates.get("hc_steel_rate", 0))
+        zincRate = float(rates.get("zinc_rate", 0))
+        
+        steel_rate = hcRate if config.get("steel_type") == "HC" else msRate
+        steel_cost = (steel_rate / 1000) * float(config.get("steel_weight_per_mt") or 0)
+        zinc_cost = zincRate * float(config.get("zinc_weight_per_mt") or 0)
+        yield_loss_pct = float(config.get("yield_loss_pct") or 0)
+        yield_loss_mult = 1 + (yield_loss_pct / 100)
+        conv_cost = float(config.get("conversion_cost_per_mt") or 0)
+        packing_cost = float(config.get("packing_cost_per_mt") or 0)
+        
+        floor_price = (steel_cost + zinc_cost) * yield_loss_mult + conv_cost + packing_cost
+        floor_val = f"₹{floor_price:,.2f}"
+        
+        steel_disp = f"Steel: ₹{steel_cost:,.0f}"
+        zinc_disp = f"Zinc: ₹{zinc_cost:,.0f}" if zinc_cost > 0 else ""
+        yl_disp = f"Yield: {yield_loss_pct}%" if yield_loss_pct > 0 else ""
+        conv_disp = f"Conv: ₹{conv_cost:,.0f}"
+        pack_disp = f"Pack: ₹{packing_cost:,.0f}" if packing_cost > 0 else ""
+        
+        parts = [p for p in [steel_disp, zinc_disp, yl_disp, conv_disp, pack_disp] if p]
+        floor_sub = ", ".join(parts) + " (excl. tax & freight)"
+
     # ── 6. Context cards ────────────────────────────────────────────────────
     cust_inv_count = len(cust_inv)
     cust_inv_this_count = len(cust_inv_this)
@@ -258,6 +293,11 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
                       if past_orders else "First-time enquiry"),
         ),
         ContextCard(
+            label="PRODUCT FLOOR COST",
+            value=floor_val,
+            sub_text=floor_sub,
+        ),
+        ContextCard(
             label="FG Stock",
             value="N/A",
             sub_text="Awaiting source data",
@@ -269,11 +309,6 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
         ),
         ContextCard(
             label="Est. Dispatch",
-            value="N/A",
-            sub_text="Awaiting source data",
-        ),
-        ContextCard(
-            label="RM Cost Baseline",
             value="N/A",
             sub_text="Awaiting source data",
         ),

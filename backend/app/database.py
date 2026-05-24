@@ -79,7 +79,7 @@ def get_product(product_id: int) -> dict | None:
         return None
     res = (
         supabase.table("products")
-        .select("id, product_type, size_mm, size_label, unit_of_measure, grade")
+        .select("id, product_type, size_mm, size_label, unit_of_measure, grade, cost_category_code")
         .eq("id", product_id)
         .limit(1)
         .execute()
@@ -395,3 +395,19 @@ def delete_product_cost_config(category_code: str) -> bool:
     except Exception as e:
         print(f"Error deleting product_cost_config: {e}")
         return False
+
+def get_product_cost_config(category_code: str) -> dict | None:
+    if not supabase or not category_code:
+        return None
+    try:
+        res = (
+            supabase.table("product_cost_config")
+            .select("*")
+            .eq("category_code", category_code)
+            .limit(1)
+            .execute()
+        )
+        return (res.data or [None])[0]
+    except Exception as e:
+        print(f"Error fetching product_cost_config for {category_code}: {e}")
+        return None

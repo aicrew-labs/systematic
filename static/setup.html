@@ -154,10 +154,13 @@
         <div>
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-bold text-white">Product Cost Configurations</h2>
-                <button class="btn btn-primary flex items-center gap-2" onclick="openModal()">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                    Add Category
-                </button>
+                <div class="flex items-center gap-3">
+                    <input type="text" id="searchInput" class="input-field" placeholder="Search categories..." oninput="renderTable()" style="width: 250px; background: rgba(15, 23, 42, 0.4); margin-bottom: 0;">
+                    <button class="btn btn-primary flex items-center gap-2" onclick="openModal()">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        Add Category
+                    </button>
+                </div>
             </div>
             <div class="glass table-container">
                 <table id="configTable">
@@ -502,8 +505,21 @@
 
         function renderTable() {
             const tbody = document.getElementById('configTableBody');
-            if (configData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="11" class="text-center py-8 text-slate-400">No configurations found. Add one to get started.</td></tr>`;
+            const search = (document.getElementById('searchInput')?.value || '').toLowerCase();
+            
+            const filteredData = configData.filter(c => {
+                const code = (c.category_code || '').toLowerCase();
+                const name = (c.category_name || '').toLowerCase();
+                const stype = (c.steel_type || '').toLowerCase();
+                return code.includes(search) || name.includes(search) || stype.includes(search);
+            });
+
+            if (filteredData.length === 0) {
+                if (configData.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="11" class="text-center py-8 text-slate-400">No configurations found. Add one to get started.</td></tr>`;
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="11" class="text-center py-8 text-slate-400">No matching categories found.</td></tr>`;
+                }
                 return;
             }
 
@@ -512,7 +528,8 @@
             const hcRate = parseFloat(document.getElementById('rateHC').value) || 0;
             const zincRate = parseFloat(document.getElementById('rateZinc').value) || 0;
 
-            tbody.innerHTML = configData.map((c, i) => {
+            tbody.innerHTML = filteredData.map((c) => {
+                const i = configData.indexOf(c);
                 const steelRate = c.steel_type === 'HC' ? hcRate : msRate;
                 const steelCost = (steelRate / 1000) * c.steel_weight_per_mt;
                 const zincCost = zincRate * (c.zinc_weight_per_mt || 0);
