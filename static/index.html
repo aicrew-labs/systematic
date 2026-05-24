@@ -84,8 +84,13 @@
         #emptyState, #loadingState { min-height: 320px; border-radius: 16px; }
         @media (min-width: 768px) { #emptyState, #loadingState { min-height: 480px; } }
 
-        .context-cards-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        @media (min-width: 640px) { .context-cards-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; } }
+        .context-cards-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+        .context-cards-grid > div { grid-column: span 3; } /* Mobile: 2 per row */
+        @media (min-width: 640px) { 
+            .context-cards-grid { gap: 14px; }
+            .context-cards-grid > div:nth-child(1), .context-cards-grid > div:nth-child(2) { grid-column: span 3; }
+            .context-cards-grid > div:nth-child(n+3) { grid-column: span 2; }
+        }
 
         .signals-history-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
         @media (min-width: 768px) { .signals-history-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -330,18 +335,10 @@
                         </div>
                         <p class="text-sm text-slate-400 mt-1.5" id="priceUnit">per MT</p>
                     </div>
-                    <div class="mb-5">
                         <div class="price-bar">
                             <div class="price-bar-floor" id="barFloor" style="width: 20%"></div>
                             <div class="price-bar-suggested" id="barSuggested" style="left: 20%; width: 40%"></div>
                         </div>
-                        <div class="flex justify-between mt-2 text-xs">
-                            <div class="text-left text-rose-400">Market low: <span id="lblFloor">—</span></div>
-                            <div class="text-center text-slate-400">Median: <span id="lblMedian">—</span></div>
-                            <div class="text-right text-slate-400">Market high: <span id="lblCeil">—</span></div>
-                        </div>
-                        <p class="text-[10px] text-slate-500 mt-1 text-center" id="lblSampleSize"></p>
-                    </div>
                     <div class="p-4 rounded-xl bg-slate-900/50 border border-slate-700/50">
                         <p class="text-sm text-slate-300 leading-relaxed" id="aiReasoning"></p>
                     </div>
@@ -686,14 +683,7 @@
             document.getElementById('priceHigh').textContent = hasPrice ? fmtINR(pr.suggested_high) : '—';
             document.getElementById('priceUnit').textContent = `per ${(pr && pr.unit) || 'MT'}`;
 
-            // Market band labels
-            document.getElementById('lblFloor').textContent  = pr && pr.market_low    ? fmtINR(pr.market_low)    : '—';
-            document.getElementById('lblMedian').textContent = pr && pr.market_median ? fmtINR(pr.market_median) : '—';
-            document.getElementById('lblCeil').textContent   = pr && pr.market_high   ? fmtINR(pr.market_high)   : '—';
-            document.getElementById('lblSampleSize').textContent =
-                pr && pr.sample_size ? `Based on ${pr.sample_size} won deal(s)` : 'Insufficient market history';
-
-            // Position the suggested band relative to market low/high
+            // Position the suggested band relative to market low/high (hidden labels but keep visual bar)
             if (hasPrice && pr.market_low && pr.market_high && pr.market_high > pr.market_low) {
                 const range = pr.market_high - pr.market_low;
                 const lowPct  = Math.max(((pr.suggested_low  - pr.market_low) / range) * 100, 0);
@@ -707,11 +697,10 @@
                 document.getElementById('barSuggested').style.width = '0%';
             }
 
-            // Context cards — first one spans 2 columns, last one spans 2 columns
+            // Context cards — first two span 3/6, last three span 2/6 (handled via CSS)
             const cards = d.context_cards || [];
             document.getElementById('contextCardsContainer').innerHTML = cards.map((c, i) => {
-                const span = (i === 0 || i === cards.length - 1) ? 'style="grid-column: span 2"' : `style="animation-delay: ${i * 0.05}s"`;
-                return `<div class="glass-card p-3 slide-up" ${span}>
+                return `<div class="glass-card p-3 slide-up" style="animation-delay: ${i * 0.05}s">
                     <p class="text-[10px] text-slate-400 uppercase mb-0.5">${escapeHtml(c.label)}</p>
                     <p class="text-base font-bold truncate">${escapeHtml(c.value)}</p>
                     <p class="text-[10px] text-slate-400 mt-1 line-clamp-2">${escapeHtml(c.sub_text)}</p>

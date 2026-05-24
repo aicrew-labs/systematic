@@ -30,6 +30,7 @@ from app.database import (
     sales_order_lookup_for_product,
     get_daily_rates,
     get_product_cost_config,
+    get_location_margin_config,
 )
 from app.schemas import (
     AnalyzeRequest,
@@ -171,89 +172,14 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
     today = date.today()
     cutoff = today - timedelta(days=RECENT_DAYS)
 
-    # ── 2. Market band ──────────────────────────────────────────────────────
-    recent_market = [i for i in market_inv if (_parse_iso(i.get("invoice_date")) or today) >= cutoff]
-    sample = recent_market if len(recent_market) >= 3 else market_inv
-    market_rates = sorted(r for r in (_rate_of(i) for i in sample) if r > 0)
-
-    if market_rates:
-        market_low    = _percentile(market_rates, 0.25)
-        market_high   = _percentile(market_rates, 0.75)
-        market_median = _percentile(market_rates, 0.50)
-    else:
-        market_low = market_high = market_median = None
-
-    # ── 3. Customer profile ─────────────────────────────────────────────────
-    cust_inv_this = [i for i in cust_inv if i.get("product_id") == req.product_id]
-    cust_rates_this = [_rate_of(i) for i in cust_inv_this[:5] if _rate_of(i) > 0]
-    customer_avg = (sum(cust_rates_this) / len(cust_rates_this)) if cust_rates_this else None
-
-    is_repeat = bool(customer.get("is_repeat")) or int(customer.get("total_orders") or 0) > 0
-    past_orders = int(customer.get("total_orders") or 0)
-
-    # Decide profile + raw anchor
-    if customer_avg:
-        profile = "repeat_known_product"
-        # Anchor to their average — slight upward room
-        raw_low  = customer_avg * 0.99
-        raw_high = customer_avg * 1.02
-    elif is_repeat and market_median:
-        profile = "repeat_new_product"
-        # Loyalty tilt: P25 → median
-        raw_low  = market_low if market_low else market_median * 0.97
-        raw_high = market_median
-    elif market_high and market_median:
-        profile = "new_customer"
-        # Premium: median → P75
-        raw_low  = market_median
-        raw_high = market_high
-    else:
-        profile = "no_data"
-        raw_low = raw_high = None
-
-    # ── 4. Enquiry signal ───────────────────────────────────────────────────
-    recent_enq_offers = sorted([
-        float(e["price_offered"]) for e in enquiries
-        if e.get("price_offered") and float(e["price_offered"]) > 0
-        and (_parse_iso(e.get("enquiry_date")) or today) >= cutoff
-    ])
-    enq_signal = "flat"
-    if recent_enq_offers and market_median:
-        enq_med = _percentile(recent_enq_offers, 0.50)
-        if enq_med and enq_med > market_median * 1.02:
-            enq_signal = "hot"
-        elif enq_med and enq_med < market_median * 0.98:
-            enq_signal = "soft"
-    if raw_low is not None and raw_high is not None:
-        tilt = {"hot": 1.02, "soft": 0.99, "flat": 1.00}[enq_signal]
-        raw_low  *= tilt
-        raw_high *= tilt
-
-    # ── 5. Payment-terms premium ────────────────────────────────────────────
-    pp = PAYMENT_PREMIUM.get(req.payment_terms or "30 Days", 0.01)
-    if raw_low is not None and raw_high is not None:
-        sug_low  = round(raw_low  * (1 + pp), 2)
-        sug_high = round(raw_high * (1 + pp), 2)
-    else:
-        sug_low = sug_high = None
-
-    price_range = PriceRange(
-        suggested_low=sug_low,
-        suggested_high=sug_high,
-        market_low=round(market_low, 2)       if market_low       else None,
-        market_high=round(market_high, 2)     if market_high      else None,
-        market_median=round(market_median, 2) if market_median    else None,
-        sample_size=len(market_rates),
-        unit=unit,
-    )
-
-    # ── 6a. Compute Floor Cost ──────────────────────────────────────────────
+    # ── 2. Compute Floor Cost ──────────────────────────────────────────────
     cat_code = product.get("cost_category_code") if product else None
     config = get_product_cost_config(cat_code) if cat_code else None
     rates = get_daily_rates()
     
     floor_val = "N/A"
     floor_sub = "Configuration missing or inactive"
+    floor_price = None
     
     if config:
         msRate = float(rates.get("ms_steel_rate", 0))
@@ -279,6 +205,126 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
         
         parts = [p for p in [steel_disp, zinc_disp, yl_disp, conv_disp, pack_disp] if p]
         floor_sub = ", ".join(parts) + " (excl. tax & freight)"
+
+    # ── 3. Market band ──────────────────────────────────────────────────────
+    recent_market = [i for i in market_inv if (_parse_iso(i.get("invoice_date")) or today) >= cutoff]
+    sample = recent_market if len(recent_market) >= 3 else market_inv
+    market_rates = sorted(r for r in (_rate_of(i) for i in sample) if r > 0)
+
+    if market_rates:
+        market_low    = _percentile(market_rates, 0.25)
+        market_high   = _percentile(market_rates, 0.75)
+        market_median = _percentile(market_rates, 0.50)
+    else:
+        market_low = market_high = market_median = None
+
+    # ── 4. Customer profile & Adjustments ───────────────────────────────────
+    cust_inv_this = [i for i in cust_inv if i.get("product_id") == req.product_id]
+    cust_rates_this = [_rate_of(i) for i in cust_inv_this[:5] if _rate_of(i) > 0]
+    customer_avg = (sum(cust_rates_this) / len(cust_rates_this)) if cust_rates_this else None
+
+    is_repeat = bool(customer.get("is_repeat")) or int(customer.get("total_orders") or 0) > 0
+    past_orders = int(customer.get("total_orders") or 0)
+
+    if customer_avg:
+        profile = "repeat_known_product"
+    elif is_repeat:
+        profile = "repeat_new_product"
+    else:
+        profile = "new_customer"
+
+    # Profile Adjustment (Competitive Tilt)
+    profile_adj = 0.0
+    pct_diff = 0.0
+    competitiveness_source = None
+    comp_product = None
+    comp_rate = 0.0
+    comp_median = 0.0
+    comp_peers = 0
+    comp_date = ""
+
+    if cust_inv:
+        # Search recent invoices to find one with same-day market peers
+        for inv in cust_inv[:15]:
+            inv_date = _parse_iso(inv.get("invoice_date"))
+            if not inv_date:
+                continue
+            inv_date_str = inv.get("invoice_date")[:10]
+            inv_prod_id = inv.get("product_id")
+            inv_rate = _rate_of(inv)
+            if inv_rate <= 0:
+                continue
+                
+            # Use pre-fetched market_inv if same product, otherwise fetch
+            peer_invs = market_inv if inv_prod_id == req.product_id else invoices_for_product(inv_prod_id, limit=200)
+            
+            # Filter to exactly the same day, EXCLUDING this customer's own invoices
+            same_day_peers = [
+                p for p in peer_invs
+                if p.get("invoice_date", "").startswith(inv_date_str)
+                and p.get("customer_id") != req.customer_id
+            ]
+            peer_rates = sorted(r for r in (_rate_of(p) for p in same_day_peers) if r > 0)
+            
+            # Need at least 1 other customer's invoice to form a comparison
+            if len(peer_rates) >= 1:
+                day_median = _percentile(peer_rates, 0.50)
+                if day_median and day_median > 0:
+                    pct_diff = ((inv_rate - day_median) / day_median) * 100
+                    competitiveness_source = "this product" if inv_prod_id == req.product_id else "other products"
+                    
+                    comp_product = inv.get("prod_code", "Unknown Product")
+                    comp_rate = inv_rate
+                    comp_median = day_median
+                    comp_peers = len(peer_rates)
+                    comp_date = inv_date_str
+                    break
+
+    # Apply tilt if we found a comparison
+    if competitiveness_source:
+        # Adjustment is proportional to the variance, capped at ±5.0%
+        profile_adj = round(max(-5.0, min(5.0, pct_diff)), 1)
+
+    # Location Adjustment
+    loc_adj = 0.0
+    region_id = customer.get("region_id")
+    if region_id:
+        loc_config = get_location_margin_config(region_id)
+        if loc_config:
+            loc_adj = float(loc_config.get("margin_adjustment_pct") or 0.0)
+
+    # ── 5. Calculate Final Cost-Plus Price ──────────────────────────────────
+    pp = PAYMENT_PREMIUM.get(req.payment_terms or "30 Days", 0.01) * 100  # Convert to % for margin add
+
+    sug_low = sug_high = None
+    base_min = 0.0
+    base_max = 0.0
+    final_min_margin = 0.0
+    final_max_margin = 0.0
+
+    if floor_price and config:
+        base_min = float(config.get("min_margin_pct") or 5.0)
+        base_max = float(config.get("max_margin_pct") or 10.0)
+        
+        final_min_margin = base_min + loc_adj + profile_adj + pp
+        final_max_margin = base_max + loc_adj + profile_adj + pp
+        
+        # Enforce hard floor: margin cannot drop below 0%
+        final_min_margin = max(0.0, final_min_margin)
+        final_max_margin = max(final_min_margin + 0.1, final_max_margin)
+        
+        sug_low = round(floor_price * (1 + final_min_margin / 100), 2)
+        sug_high = round(floor_price * (1 + final_max_margin / 100), 2)
+
+    price_range = PriceRange(
+        suggested_low=sug_low,
+        suggested_high=sug_high,
+        market_low=round(market_low, 2)       if market_low       else None,
+        market_high=round(market_high, 2)     if market_high      else None,
+        market_median=round(market_median, 2) if market_median    else None,
+        sample_size=len(market_rates),
+        unit=unit,
+    )
 
     # ── 6. Context cards ────────────────────────────────────────────────────
     cust_inv_count = len(cust_inv)
@@ -316,41 +362,104 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
 
     # ── 7. Market signals ───────────────────────────────────────────────────
     signals: list[MarketSignal] = []
-    signals.append(MarketSignal(
-        color="green" if profile == "repeat_known_product" else "blue" if is_repeat else "amber",
-        text=(f"Customer has bought {p_label} {cust_inv_this_count} time(s) — "
-              f"avg ₹{customer_avg:,.0f}/{unit}"
-              if customer_avg else
-              f"Repeat customer ({past_orders} past order(s)) but never bought this product"
-              if is_repeat else
-              "New customer — no prior order history"),
-    ))
 
-    if market_median:
+    # Show margin breakdown
+    if config:
         signals.append(MarketSignal(
-            color="amber",
-            text=(f"Market band on {p_label}: ₹{int(market_low):,} – ₹{int(market_high):,}/{unit}, "
-                  f"median ₹{int(market_median):,} (last {len(market_rates)} won deal(s)"
-                  f"{' in 90 days' if recent_market else ', all-time'})"),
+            color="blue",
+            text=f"Base Margin: {base_min:.1f}% - {base_max:.1f}% (from config '{cat_code}')",
         ))
+    if loc_adj != 0:
+        sign = "+" if loc_adj > 0 else ""
+        signals.append(MarketSignal(
+            color="amber" if loc_adj < 0 else "blue",
+            text=f"Location Adj: {sign}{loc_adj}% applied for region '{region_id}'",
+        ))
+    if profile_adj != 0:
+        sign = "+" if profile_adj > 0 else ""
+        c_name = customer.get("name", "Customer")
+        signals.append(MarketSignal(
+            color="amber" if profile_adj < 0 else "blue",
+            text=f"Profile Adj: {sign}{profile_adj}% (On {comp_date}, {c_name} bought {comp_product} @ ₹{comp_rate:,.0f}/{unit}. Same-day market median of {comp_peers} customers was ₹{comp_median:,.0f}/{unit}. Variance: {pct_diff:+.1f}%)",
+        ))
+    if pp != 0:
+        sign = "+" if pp > 0 else ""
+        signals.append(MarketSignal(
+            color="blue",
+            text=f"Payment Terms Premium: {sign}{pp:.1f}% applied for '{req.payment_terms}'",
+        ))
+
+    c_name = customer.get("name", "Customer")
+    if customer_avg:
+        # Repeat customer who has bought this product before
+        last_this = cust_inv_this[0] if cust_inv_this else None
+        if last_this:
+            last_date = last_this.get("invoice_date", "")[:10]
+            last_rate_this = _rate_of(last_this)
+            signals.append(MarketSignal(
+                color="green",
+                text=f"Last purchase: {c_name} bought {p_label} on {last_date} @ ₹{last_rate_this:,.0f}/{unit} ({cust_inv_this_count} purchase(s) total, avg ₹{customer_avg:,.0f})",
+            ))
+            # Check same-day peers for this product — EXCLUDE this customer's own invoices
+            same_day = [
+                p for p in market_inv
+                if p.get("invoice_date", "").startswith(last_date)
+                and p.get("customer_id") != req.customer_id
+            ]
+            same_day_rates = sorted(r for r in (_rate_of(p) for p in same_day) if r > 0)
+            if len(same_day_rates) >= 1:
+                sd_avg = sum(same_day_rates) / len(same_day_rates)
+                sd_median = _percentile(same_day_rates, 0.50)
+                diff_pct = ((last_rate_this - sd_median) / sd_median * 100) if sd_median else 0
+                color = "amber" if diff_pct < -2 else "blue" if diff_pct > 2 else "green"
+                signals.append(MarketSignal(
+                    color=color,
+                    text=f"Same-day market ({last_date}): {len(same_day_rates)} other customer(s) bought {p_label} — avg ₹{sd_avg:,.0f}, median ₹{sd_median:,.0f}/{unit}. {c_name} paid {diff_pct:+.1f}% vs that day's median.",
+                ))
+            else:
+                signals.append(MarketSignal(
+                    color="blue",
+                    text=f"Same-day market ({last_date}): No other customers bought {p_label} on that day — no same-day comparison available.",
+                ))
+    elif is_repeat and cust_inv:
+        # Repeat customer but hasn't bought this product — show their last invoice on any product
+        last_inv = cust_inv[0]
+        last_prod_code = last_inv.get("prod_code", "Unknown")
+        last_inv_date = last_inv.get("invoice_date", "")[:10]
+        last_inv_rate = _rate_of(last_inv)
+        last_prod_id = last_inv.get("product_id")
+        signals.append(MarketSignal(
+            color="blue",
+            text=f"Last purchase: {c_name} bought {last_prod_code} on {last_inv_date} @ ₹{last_inv_rate:,.0f}/{unit} — has not bought {p_label} before ({past_orders} total order(s)).",
+        ))
+        # Same-day comparison for that other product — EXCLUDE this customer's own invoices
+        if last_prod_id and last_inv_rate > 0:
+            peer_invs_other = invoices_for_product(last_prod_id, limit=200)
+            same_day_other = [
+                p for p in peer_invs_other
+                if p.get("invoice_date", "").startswith(last_inv_date)
+                and p.get("customer_id") != req.customer_id
+            ]
+            sd_other_rates = sorted(r for r in (_rate_of(p) for p in same_day_other) if r > 0)
+            if len(sd_other_rates) >= 1:
+                sd_other_median = _percentile(sd_other_rates, 0.50)
+                diff_pct = ((last_inv_rate - sd_other_median) / sd_other_median * 100) if sd_other_median else 0
+                color = "amber" if diff_pct < -2 else "blue" if diff_pct > 2 else "green"
+                signals.append(MarketSignal(
+                    color=color,
+                    text=f"Same-day market ({last_inv_date}): {len(sd_other_rates)} other customer(s) bought {last_prod_code} — median ₹{sd_other_median:,.0f}/{unit}. {c_name} paid {diff_pct:+.1f}% vs that day's median. Profile tilt applied to margin.",
+                ))
+            else:
+                signals.append(MarketSignal(
+                    color="blue",
+                    text=f"Same-day market ({last_inv_date}): No other customers bought {last_prod_code} on that day — profile tilt not applicable.",
+                ))
     else:
         signals.append(MarketSignal(
-            color="red",
-            text=f"No prior won deals for {p_label} — recommendation unavailable",
+            color="amber",
+            text=f"New customer — no prior order history. Standard base margin applied.",
         ))
 
-    if enq_signal == "hot":
-        signals.append(MarketSignal(
-            color="green",
-            text=f"Enquiry trend: hot — recent enquiries skew above market median",
-        ))
-    elif enq_signal == "soft":
-        signals.append(MarketSignal(
-            color="red",
-            text=f"Enquiry trend: soft — recent enquiries skew below market median",
-        ))
-
-    # Lost-deal alert
     lost_count = sum(1 for e in enquiries
                      if (e.get("customer_id") == req.customer_id)
                      and _enquiry_status(e.get("status"), e.get("customer_id"), won_lookup, so_lookup) == "lost")
@@ -358,14 +467,6 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
         signals.append(MarketSignal(
             color="red",
             text=f"This customer has {lost_count} lost enquiry on this product — they're price-sensitive",
-        ))
-
-    # Payment-terms transparency
-    if pp != 0:
-        sign = "+" if pp > 0 else ""
-        signals.append(MarketSignal(
-            color="blue",
-            text=f"Payment terms premium: {sign}{pp*100:.1f}% applied for '{req.payment_terms}'",
         ))
 
     # ── 8. History tables ───────────────────────────────────────────────────
@@ -398,7 +499,7 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
         reasoning = _algo_reasoning(req, customer, product, profile, customer_avg,
                                     market_low, market_median, market_high,
                                     sug_low, sug_high, len(market_rates),
-                                    enq_signal, pp, lost_count)
+                                    loc_adj, profile_adj, pp, lost_count, base_min, base_max)
 
     return AnalyzeResponse(
         mode_used=req.mode,
@@ -417,7 +518,7 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
 def _algo_reasoning(req, customer, product, profile, customer_avg,
                     market_low, market_median, market_high,
                     sug_low, sug_high, sample_size,
-                    enq_signal, pp, lost_count) -> str:
+                    loc_adj, profile_adj, pp, lost_count, base_min, base_max) -> str:
     name = customer.get("name", "Customer")
     p_label = f"{product.get('product_type')} {product.get('size_label')}"
     unit = product.get("unit_of_measure") or "MT"
@@ -426,37 +527,28 @@ def _algo_reasoning(req, customer, product, profile, customer_avg,
 
     # Profile
     if profile == "repeat_known_product":
-        parts.append(f"{name} has bought {p_label} before — historical avg ₹{customer_avg:,.0f}/{unit}. "
-                     f"Anchor the quote to that price to protect the relationship.")
+        parts.append(f"{name} has bought {p_label} before — historical avg ₹{customer_avg:,.0f}/{unit}.")
     elif profile == "repeat_new_product":
-        parts.append(f"{name} is a known customer but has not bought {p_label} before. "
-                     f"Apply a small loyalty tilt off the market median.")
+        parts.append(f"{name} is a known customer but has not bought {p_label} before.")
     elif profile == "new_customer":
-        parts.append(f"{name} is a new customer. Quote at the upper end of the market band "
-                     f"to capture margin while building the relationship.")
-    else:
-        parts.append(f"No market history found for {p_label}. Cannot recommend a price reliably "
-                     f"— consult sales team or wait for more deal data.")
+        parts.append(f"{name} is a new customer.")
 
-    # Market context
-    if market_median:
-        parts.append(f"Market band (last {sample_size} won deal(s)): "
-                     f"₹{int(market_low):,} – ₹{int(market_high):,}/{unit}, median ₹{int(market_median):,}.")
-
-    # Enquiry signal
-    if enq_signal == "hot":
-        parts.append("Recent enquiries are pricing higher than median — added a 2% upward tilt.")
-    elif enq_signal == "soft":
-        parts.append("Recent enquiries are pricing lower than median — held back 1%.")
+    # Base Margin + Adjustments
+    if base_min > 0:
+        parts.append(f"Base margin applied: {base_min:.1f}% to {base_max:.1f}%.")
+        
+        if loc_adj != 0:
+            sign = "+" if loc_adj > 0 else ""
+            parts.append(f"Region '{customer.get('region_id')}' adds {sign}{loc_adj}%.")
+            
+        if profile_adj != 0:
+            sign = "+" if profile_adj > 0 else ""
+            parts.append(f"Historical competitiveness tilt adds {sign}{profile_adj}%.")
 
     # Payment terms
     if pp != 0:
         sign = "+" if pp > 0 else ""
-        parts.append(f"'{req.payment_terms}' adds {sign}{pp*100:.1f}% (faster payments earn discounts; longer credit costs more).")
-
-    # Lost-deal warning
-    if lost_count > 0:
-        parts.append(f"Heads-up: this customer has {lost_count} lost enquiry on this product — they're price-sensitive.")
+        parts.append(f"'{req.payment_terms}' adds {sign}{pp:.1f}%.")
 
     # Final
     if sug_low and sug_high:

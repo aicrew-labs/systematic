@@ -48,7 +48,7 @@ def get_customer(customer_id: int) -> dict | None:
         return None
     res = (
         supabase.table("customers")
-        .select("id, name, total_orders, is_repeat, sales_rep")
+        .select("id, name, total_orders, is_repeat, sales_rep, region_id")
         .eq("id", customer_id)
         .limit(1)
         .execute()
@@ -410,4 +410,20 @@ def get_product_cost_config(category_code: str) -> dict | None:
         return (res.data or [None])[0]
     except Exception as e:
         print(f"Error fetching product_cost_config for {category_code}: {e}")
+        return None
+
+def get_location_margin_config(region_id: str) -> dict | None:
+    if not supabase or not region_id:
+        return None
+    try:
+        res = (
+            supabase.table("location_margin_config")
+            .select("*")
+            .eq("region_id", region_id)
+            .limit(1)
+            .execute()
+        )
+        return (res.data or [None])[0]
+    except Exception as e:
+        print(f"Error fetching location_margin_config for {region_id}: {e}")
         return None
