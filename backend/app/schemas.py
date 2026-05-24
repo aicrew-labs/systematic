@@ -41,6 +41,36 @@ class DailyRatesInput(BaseModel):
     zinc_rate: float
 
 
+# ── Configuration Models ───────────────────────────────────────────────────
+
+class ProductCostConfigOut(BaseModel):
+    id: int
+    category_code: str
+    category_name: str
+    steel_type: str = "MS"
+    steel_weight_per_mt: float
+    zinc_weight_per_mt: float = 0.0
+    yield_loss_pct: Optional[float] = None
+    conversion_cost_per_mt: float
+    packing_cost_per_mt: Optional[float] = None
+    min_margin_pct: float = 10.0
+    max_margin_pct: float = 15.0
+    is_active: bool = True
+
+class ProductCostConfigInput(BaseModel):
+    category_code: str
+    category_name: str
+    steel_type: str = "MS"
+    steel_weight_per_mt: float
+    zinc_weight_per_mt: float = 0.0
+    yield_loss_pct: Optional[float] = None
+    conversion_cost_per_mt: float
+    packing_cost_per_mt: Optional[float] = None
+    min_margin_pct: float = 10.0
+    max_margin_pct: float = 15.0
+    is_active: bool = True
+
+
 # ── Analyze request/response ───────────────────────────────────────────────
 
 class AnalyzeRequest(BaseModel):

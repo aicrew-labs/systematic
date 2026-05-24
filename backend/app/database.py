@@ -272,6 +272,26 @@ def get_daily_rates() -> dict:
     return dict(DEFAULT_RATES, rate_date=None)
 
 
+def get_daily_rates_history(days: int = 7) -> list[dict]:
+    """Fetch daily rates history for the last N days."""
+    if not supabase:
+        return []
+    try:
+        from datetime import date, timedelta
+        start_date = (date.today() - timedelta(days=days)).isoformat()
+        res = (
+            supabase.table("daily_rates")
+            .select("ms_steel_rate, hc_steel_rate, zinc_rate, rate_date")
+            .gte("rate_date", start_date)
+            .order("rate_date", desc=False)  # Chronological order for charting
+            .execute()
+        )
+        return res.data or []
+    except Exception as e:
+        print(f"Error fetching daily_rates history: {e}")
+        return []
+
+
 def insert_daily_rates(rates: dict[str, Any]) -> dict:
     """Upsert daily rates: update today's row if it exists, otherwise insert."""
     if not supabase:
@@ -310,3 +330,68 @@ def insert_daily_rates(rates: dict[str, Any]) -> dict:
     except Exception as e:
         print(f"Error upserting daily_rates: {e}")
     return get_daily_rates()
+
+
+# ── Configuration Tables ───────────────────────────────────────────────────
+
+def list_product_cost_configs() -> list[dict]:
+    if not supabase:
+        return []
+    try:
+        res = (
+            supabase.table("product_cost_config")
+            .select("*")
+            .order("category_name")
+            .execute()
+        )
+        return res.data or []
+    except Exception as e:
+        print(f"Error fetching product_cost_config: {e}")
+        return []
+
+def upsert_product_cost_config(data: dict[str, Any]) -> dict | None:
+    if not supabase:
+        return None
+    try:
+        # Check if row exists based on category_code (unique)
+        existing = (
+            supabase.table("product_cost_config")
+            .select("id")
+            .eq("category_code", data["category_code"])
+            .limit(1)
+            .execute()
+        )
+        if existing.data:
+            data["updated_by"] = "Dashboard"
+            res = (
+                supabase.table("product_cost_config")
+                .update(data)
+                .eq("category_code", data["category_code"])
+                .execute()
+            )
+        else:
+            data["updated_by"] = "Dashboard"
+            res = (
+                supabase.table("product_cost_config")
+                .insert(data)
+                .execute()
+            )
+        return (res.data or [None])[0]
+    except Exception as e:
+        print(f"Error upserting product_cost_config: {e}")
+        return None
+
+def delete_product_cost_config(category_code: str) -> bool:
+    if not supabase:
+        return False
+    try:
+        res = (
+            supabase.table("product_cost_config")
+            .delete()
+            .eq("category_code", category_code)
+            .execute()
+        )
+        return True
+    except Exception as e:
+        print(f"Error deleting product_cost_config: {e}")
+        return False

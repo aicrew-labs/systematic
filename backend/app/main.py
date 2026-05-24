@@ -13,9 +13,12 @@ from fastapi.staticfiles import StaticFiles
 
 from app.database import (
     get_daily_rates,
+    get_daily_rates_history,
     insert_daily_rates,
     list_customers,
     list_products,
+    list_product_cost_configs,
+    upsert_product_cost_config,
 )
 from app.pricing_engine import analyze
 from app.schemas import (
@@ -26,6 +29,8 @@ from app.schemas import (
     DailyRatesOut,
     ProductGroup,
     ProductSize,
+    ProductCostConfigOut,
+    ProductCostConfigInput,
 )
 
 
@@ -137,6 +142,33 @@ def get_rates():
 @app.post("/api/v1/rates", response_model=DailyRatesOut)
 def set_rates(rates: DailyRatesInput):
     return DailyRatesOut(**insert_daily_rates(rates.model_dump()))
+
+
+@app.get("/api/v1/rates/history", response_model=List[DailyRatesOut])
+def get_rates_history(days: int = 7):
+    return [DailyRatesOut(**r) for r in get_daily_rates_history(days=days)]
+
+
+# ── Configuration endpoints ────────────────────────────────────────────────
+
+@app.get("/api/v1/config/product-costs", response_model=List[ProductCostConfigOut])
+def get_product_costs():
+    return [ProductCostConfigOut(**c) for c in list_product_cost_configs()]
+
+
+@app.post("/api/v1/config/product-costs", response_model=ProductCostConfigOut)
+def update_product_cost(config: ProductCostConfigInput):
+    res = upsert_product_cost_config(config.model_dump())
+    if not res:
+        raise HTTPException(status_code=500, detail="Failed to save configuration")
+    return ProductCostConfigOut(**res)
+
+@app.delete("/api/v1/config/product-costs/{category_code}")
+def delete_product_cost(category_code: str):
+    from app.database import delete_product_cost_config
+    if delete_product_cost_config(category_code):
+        return {"status": "deleted"}
+    raise HTTPException(status_code=500, detail="Failed to delete configuration")
 
 
 # ── Single bundled analyzer ────────────────────────────────────────────────
