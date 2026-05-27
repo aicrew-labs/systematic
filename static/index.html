@@ -991,12 +991,11 @@
             if (qty !== null && qty <= 0) { alert('Please enter a valid positive quantity.'); return; }
 
             const algoBtn = document.getElementById('algoBtn');
-            const aiBtn   = document.getElementById('aiBtn');
             const empty   = document.getElementById('emptyState');
             const loading = document.getElementById('loadingState');
             const results = document.getElementById('resultsState');
 
-            algoBtn.disabled = true; aiBtn.disabled = true;
+            algoBtn.disabled = true;
             empty.classList.add('hidden');
             results.classList.add('hidden');
             loading.classList.remove('hidden');
@@ -1080,7 +1079,7 @@
                 loading.classList.replace('flex', 'hidden');
                 empty.classList.remove('hidden');
             } finally {
-                algoBtn.disabled = false; aiBtn.disabled = false;
+                algoBtn.disabled = false;
             }
         }
 

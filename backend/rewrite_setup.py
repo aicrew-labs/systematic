@@ -426,6 +426,21 @@ HTML_CONTENT = """<!DOCTYPE html>
         let steelChartInst = null;
         let zincChartInst = null;
 
+        function getAuthHeaders() {
+            const token = localStorage.getItem('sys_access_token');
+            if (!token) {
+                window.location.href = '/login';
+                return {};
+            }
+            return { 'Authorization': `Bearer ${token}` };
+        }
+
+        function logout() {
+            localStorage.removeItem('sys_access_token');
+            localStorage.removeItem('sys_user');
+            window.location.href = '/login';
+        }
+
         async function init() {
             // Apply user info
             try {
