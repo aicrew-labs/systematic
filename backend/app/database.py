@@ -492,3 +492,30 @@ def update_last_login(user_id: str) -> None:
         supabase.table("app_users").update({"last_login": now}).eq("user_id", user_id).execute()
     except Exception as e:
         print(f"Error updating last login: {e}")
+
+def list_all_users() -> list[dict]:
+    if not supabase: return []
+    try:
+        res = supabase.table("app_users").select("id, user_id, full_name, email, role, is_active, last_login, created_at").order("id").execute()
+        return res.data or []
+    except Exception as e:
+        print(f"Error fetching users: {e}")
+        return []
+
+def create_user(data: dict) -> dict | None:
+    if not supabase: return None
+    try:
+        res = supabase.table("app_users").insert(data).execute()
+        return (res.data or [None])[0]
+    except Exception as e:
+        print(f"Error creating user: {e}")
+        return None
+
+def update_user(user_id: str, data: dict) -> dict | None:
+    if not supabase: return None
+    try:
+        res = supabase.table("app_users").update(data).eq("user_id", user_id).execute()
+        return (res.data or [None])[0]
+    except Exception as e:
+        print(f"Error updating user: {e}")
+        return None

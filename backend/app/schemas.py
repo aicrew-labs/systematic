@@ -174,3 +174,28 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserInfo
+
+class UserCreate(BaseModel):
+    user_id: str
+    password: str
+    full_name: str
+    email: Optional[str] = None
+    role: str = "user"
+    is_active: bool = True
+
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+    password: Optional[str] = None
+
+class UserResponse(BaseModel):
+    id: int
+    user_id: str
+    full_name: str
+    email: Optional[str] = None
+    role: str
+    is_active: bool
+    last_login: Optional[str] = None
+    created_at: Optional[str] = None

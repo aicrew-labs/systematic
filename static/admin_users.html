@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - Systematic Quote Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .glass-card { background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; }
+        .input-field { background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(148, 163, 184, 0.2); color: #f8fafc; border-radius: 6px; padding: 6px 12px; font-size: 13px; width: 100%; outline: none; transition: border-color 0.2s; }
+        .input-field:focus { border-color: #3b82f6; }
+        
+        .table-container { overflow-x: auto; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.1); }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background: rgba(15, 23, 42, 0.8); color: #94a3b8; font-size: 11px; text-transform: uppercase; font-weight: 600; padding: 12px 16px; border-bottom: 1px solid rgba(148, 163, 184, 0.1); }
+        td { padding: 12px 16px; border-bottom: 1px solid rgba(148, 163, 184, 0.05); font-size: 13px; color: #e2e8f0; }
+        tr:hover td { background: rgba(255, 255, 255, 0.02); }
+        
+        .btn-primary { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: transform 0.1s, opacity 0.2s; border: none; }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-primary:active { transform: scale(0.97); }
+
+        .btn-setup { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: rgba(30,41,59,.6); border: 1px solid rgba(148,163,184,.15); color: #94a3b8; cursor: pointer; transition: all .3s ease; position: relative; }
+        .btn-setup:hover { background: rgba(51,65,85,.8); color: #f8fafc; border-color: rgba(148,163,184,.3); }
+        .btn-setup svg { width: 16px; height: 16px; transition: transform .5s ease; }
+        .btn-setup:hover svg { transform: rotate(90deg); }
+        .btn-setup::after { content: attr(aria-label); position: absolute; top: 110%; right: 0; background: rgba(15,23,42,.95); color: #f8fafc; font-size: 10px; font-weight: 600; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(148,163,184,.2); opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; pointer-events: none; white-space: nowrap; }
+        .btn-setup:hover::after { opacity: 1; visibility: visible; }
+
+        .badge-active { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .badge-inactive { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .badge-admin { background: rgba(139, 92, 246, 0.2); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col relative pb-10" onload="init()">
+    
+    <!-- Header -->
+    <header class="border-b border-slate-800/50 glass sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="/static/index.html" class="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition" aria-label="Back to Dashboard">
+                    <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                </a>
+                <div>
+                    <h1 class="text-sm font-bold text-white tracking-tight">User Management</h1>
+                    <p class="text-[10px] text-slate-400">Admin Control Panel</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 ml-6 shrink-0">
+                <span id="userInfo" class="text-[12px] font-semibold text-slate-200 bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 hidden"></span>
+
+                <a href="/static/setup.html" class="btn-setup" aria-label="Setup">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </a>
+                
+                <button onclick="logout()" class="btn-setup" aria-label="Logout" style="background: rgba(220, 38, 38, 0.2);">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="text-red-400">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto w-full px-4 mt-8 flex-1 flex flex-col gap-6">
+        
+        <div class="flex items-center justify-between">
+            <h2 class="text-lg font-bold text-white">System Users</h2>
+            <button onclick="openModal()" class="btn-primary flex items-center gap-2">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                New User
+            </button>
+        </div>
+        
+        <div class="glass-card p-1">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Last Login</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <tr><td colspan="7" class="text-center py-8 text-slate-500">Loading users...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- User Modal -->
+    <div id="userModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform scale-95 transition-transform duration-300" id="userModalContent">
+            <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white" id="modalTitle">Add New User</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white transition">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            
+            <div class="p-6 flex flex-col gap-4">
+                <input type="hidden" id="editingUserId" value="">
+                
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">User ID *</label>
+                    <input type="text" id="userId" class="input-field" placeholder="e.g. jdoe" required>
+                    <p class="text-[10px] text-slate-500 mt-1" id="userIdHint">Cannot be changed after creation.</p>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Full Name *</label>
+                    <input type="text" id="fullName" class="input-field" placeholder="John Doe" required>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Email</label>
+                    <input type="email" id="email" class="input-field" placeholder="john@example.com">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Role *</label>
+                        <select id="role" class="input-field">
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Status *</label>
+                        <select id="isActive" class="input-field">
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="pt-2 border-t border-slate-700 mt-2">
+                    <label class="block text-xs font-medium text-slate-400 mb-1" id="passwordLabel">Password *</label>
+                    <input type="password" id="password" class="input-field" placeholder="Enter password">
+                    <p class="text-[10px] text-slate-500 mt-1" id="passwordHint">Required for new users.</p>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 bg-slate-900/50 flex justify-end gap-3">
+                <button onclick="closeModal()" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white transition">Cancel</button>
+                <button id="saveBtn" onclick="saveUser()" class="btn-primary">Save User</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let usersData = [];
+
+        function getAuthHeaders() {
+            const token = localStorage.getItem('sys_token');
+            if (!token) {
+                window.location.href = '/login';
+                return {};
+            }
+            return { 'Authorization': `Bearer ${token}` };
+        }
+
+        function logout() {
+            localStorage.removeItem('sys_token');
+            localStorage.removeItem('sys_user');
+            window.location.href = '/login';
+        }
+
+        async function init() {
+            // Apply user info & check admin role
+            const userStr = localStorage.getItem('sys_user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                const ui = document.getElementById('userInfo');
+                if (ui) {
+                    ui.textContent = user.full_name || user.user_id;
+                    ui.classList.remove('hidden');
+                }
+                
+                if (user.role !== 'admin') {
+                    document.body.innerHTML = '<div class="p-10 text-center text-red-400 text-xl">Access Denied: Admin role required.</div>';
+                    return;
+                }
+            } else {
+                window.location.href = '/login';
+                return;
+            }
+
+            await loadUsers();
+        }
+
+        async function loadUsers() {
+            try {
+                const res = await fetch('/api/v1/admin/users', { headers: getAuthHeaders() });
+                if (res.status === 401 || res.status === 403) return logout();
+                if (!res.ok) throw new Error(await res.text());
+                
+                usersData = await res.json();
+                renderUsers();
+            } catch (err) {
+                console.error("Failed to load users:", err);
+                document.getElementById('usersTableBody').innerHTML = `<tr><td colspan="7" class="text-center py-4 text-red-400">Failed to load users</td></tr>`;
+            }
+        }
+
+        function renderUsers() {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            
+            if (usersData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500">No users found</td></tr>`;
+                return;
+            }
+            
+            usersData.forEach(u => {
+                const tr = document.createElement('tr');
+                
+                let roleBadge = u.role === 'admin' 
+                    ? `<span class="badge-admin">Admin</span>` 
+                    : `<span class="text-slate-400 text-xs">User</span>`;
+                    
+                let statusBadge = u.is_active 
+                    ? `<span class="badge-active">Active</span>` 
+                    : `<span class="badge-inactive">Inactive</span>`;
+
+                let lastLoginStr = u.last_login ? new Date(u.last_login).toLocaleString() : '-';
+
+                tr.innerHTML = `
+                    <td class="font-medium text-white">${u.user_id}</td>
+                    <td>${u.full_name}</td>
+                    <td class="text-slate-400">${u.email || '-'}</td>
+                    <td>${roleBadge}</td>
+                    <td>${statusBadge}</td>
+                    <td class="text-slate-400 text-xs">${lastLoginStr}</td>
+                    <td class="text-right">
+                        <button onclick="openModal('${u.user_id}')" class="text-blue-400 hover:text-blue-300 text-xs font-medium px-2 py-1 rounded hover:bg-blue-900/30 transition">
+                            Edit
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openModal(userId = null) {
+            const modal = document.getElementById('userModal');
+            const content = document.getElementById('userModalContent');
+            const title = document.getElementById('modalTitle');
+            const idInput = document.getElementById('userId');
+            
+            // Reset form
+            document.getElementById('editingUserId').value = '';
+            idInput.value = '';
+            document.getElementById('fullName').value = '';
+            document.getElementById('email').value = '';
+            document.getElementById('role').value = 'user';
+            document.getElementById('isActive').value = 'true';
+            document.getElementById('password').value = '';
+            
+            if (userId) {
+                const u = usersData.find(x => x.user_id === userId);
+                if (u) {
+                    title.textContent = 'Edit User';
+                    document.getElementById('editingUserId').value = u.user_id;
+                    idInput.value = u.user_id;
+                    idInput.disabled = true;
+                    idInput.classList.add('opacity-50', 'cursor-not-allowed');
+                    
+                    document.getElementById('fullName').value = u.full_name;
+                    document.getElementById('email').value = u.email || '';
+                    document.getElementById('role').value = u.role;
+                    document.getElementById('isActive').value = u.is_active ? 'true' : 'false';
+                    
+                    document.getElementById('passwordLabel').textContent = 'Reset Password';
+                    document.getElementById('passwordHint').textContent = 'Leave blank to keep current password.';
+                }
+            } else {
+                title.textContent = 'Add New User';
+                idInput.disabled = false;
+                idInput.classList.remove('opacity-50', 'cursor-not-allowed');
+                document.getElementById('passwordLabel').textContent = 'Password *';
+                document.getElementById('passwordHint').textContent = 'Required for new users.';
+            }
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('userModal');
+            const content = document.getElementById('userModalContent');
+            
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        async function saveUser() {
+            const btn = document.getElementById('saveBtn');
+            const editingId = document.getElementById('editingUserId').value;
+            
+            const payload = {
+                full_name: document.getElementById('fullName').value.trim(),
+                email: document.getElementById('email').value.trim() || null,
+                role: document.getElementById('role').value,
+                is_active: document.getElementById('isActive').value === 'true',
+            };
+            
+            const pwd = document.getElementById('password').value;
+
+            if (editingId) {
+                // Update
+                if (pwd) payload.password = pwd;
+                
+                try {
+                    btn.disabled = true;
+                    btn.textContent = 'Saving...';
+                    const res = await fetch(`/api/v1/admin/users/${editingId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                    await loadUsers();
+                    closeModal();
+                } catch (err) {
+                    alert('Update failed: ' + err.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Save User';
+                }
+            } else {
+                // Create
+                payload.user_id = document.getElementById('userId').value.trim();
+                payload.password = pwd;
+                
+                if (!payload.user_id || !payload.full_name || !payload.password) {
+                    alert('User ID, Full Name, and Password are required.');
+                    return;
+                }
+                
+                try {
+                    btn.disabled = true;
+                    btn.textContent = 'Creating...';
+                    const res = await fetch('/api/v1/admin/users', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                    await loadUsers();
+                    closeModal();
+                } catch (err) {
+                    alert('Creation failed: ' + err.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Save User';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

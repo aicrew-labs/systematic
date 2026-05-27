@@ -64,3 +64,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInfo:
         role=user_data["role"],
         email=user_data.get("email")
     )
+
+
+async def require_admin(current_user: UserInfo = Depends(get_current_user)) -> UserInfo:
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions"
+        )
+    return current_user

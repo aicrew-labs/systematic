@@ -35,14 +35,19 @@ from app.schemas import (
     LoginRequest,
     LoginResponse,
     UserInfo,
+    UserCreate,
+    UserUpdate,
+    UserResponse,
 )
 from app.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     create_access_token,
     get_current_user,
     verify_password,
+    require_admin,
+    get_password_hash,
 )
-from app.database import get_user_by_user_id, update_last_login
+from app.database import get_user_by_user_id, update_last_login, list_all_users, create_user, update_user
 from datetime import timedelta
 
 
@@ -156,7 +161,44 @@ def login(req: LoginRequest):
 def read_users_me(current_user: UserInfo = Depends(get_current_user)):
     return current_user
 
-# ── Read-only listings ─────────────────────────────────────────────────────
+# ── Admin User Management ──────────────────────────────────────────────────
+
+@app.get("/api/v1/admin/users", response_model=List[UserResponse])
+def get_all_users(current_user: UserInfo = Depends(require_admin)):
+    users = list_all_users()
+    return users
+
+@app.post("/api/v1/admin/users", response_model=UserResponse)
+def add_new_user(user: UserCreate, current_user: UserInfo = Depends(require_admin)):
+    existing = get_user_by_user_id(user.user_id)
+    if existing:
+        raise HTTPException(status_code=400, detail="User ID already exists")
+    
+    hashed_password = get_password_hash(user.password)
+    new_user_data = user.dict()
+    new_user_data["password"] = hashed_password
+    
+    created = create_user(new_user_data)
+    if not created:
+        raise HTTPException(status_code=500, detail="Failed to create user")
+    return created
+
+@app.put("/api/v1/admin/users/{user_id}", response_model=UserResponse)
+def modify_user(user_id: str, updates: UserUpdate, current_user: UserInfo = Depends(require_admin)):
+    existing = get_user_by_user_id(user_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    update_data = updates.dict(exclude_unset=True)
+    if "password" in update_data:
+        update_data["password"] = get_password_hash(update_data["password"])
+        
+    updated = update_user(user_id, update_data)
+    if not updated:
+        raise HTTPException(status_code=500, detail="Failed to update user")
+    return updated
+
+# ── Read-only Listings ─────────────────────────────────────────────────────
 
 @app.get("/api/v1/customers", response_model=List[CustomerInfo])
 def get_customers(_=Depends(get_current_user)):

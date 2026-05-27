@@ -73,6 +73,13 @@ HTML_CONTENT = """<!DOCTYPE html>
         .btn-confirm.saved  { background: linear-gradient(135deg, #10b981, #14b8a6); }
 
         .rate-as-of { font-size: 9px; color: #475569; white-space: nowrap; text-align: center; flex-shrink: 0; }
+        
+        .btn-setup { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: rgba(30,41,59,.6); border: 1px solid rgba(148,163,184,.15); color: #94a3b8; cursor: pointer; transition: all .3s ease; position: relative; }
+        .btn-setup:hover { background: rgba(51,65,85,.8); color: #f8fafc; border-color: rgba(148,163,184,.3); }
+        .btn-setup svg { width: 16px; height: 16px; transition: transform .5s ease; }
+        .btn-setup:hover svg { transform: rotate(90deg); }
+        .btn-setup::after { content: attr(aria-label); position: absolute; top: 110%; right: 0; background: rgba(15,23,42,.95); color: #f8fafc; font-size: 10px; font-weight: 600; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(148,163,184,.2); opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; pointer-events: none; white-space: nowrap; }
+        .btn-setup:hover::after { opacity: 1; visibility: visible; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col relative pb-10" onload="init()">
@@ -136,6 +143,25 @@ HTML_CONTENT = """<!DOCTYPE html>
                     </button>
                     <span id="rateAsOf" class="rate-as-of">Loading…</span>
                 </div>
+            </div>
+
+            <!-- Status and Logout -->
+            <div class="flex items-center gap-3 ml-6 shrink-0">
+                <span id="userInfo" class="text-[12px] font-semibold text-slate-200 bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 hidden">
+                    <!-- populated by JS -->
+                </span>
+
+                <a href="/static/admin_users.html" id="adminUsersBtn" class="btn-setup !hidden" aria-label="Manage Users">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                </a>
+                
+                <button onclick="logout()" class="btn-setup" aria-label="Logout" style="background: rgba(220, 38, 38, 0.2);">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="text-red-400">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                    </svg>
+                </button>
             </div>
 
         </div>
@@ -401,6 +427,25 @@ HTML_CONTENT = """<!DOCTYPE html>
         let zincChartInst = null;
 
         async function init() {
+            // Apply user info
+            try {
+                const userStr = localStorage.getItem('sys_user');
+                if (userStr) {
+                    const user = JSON.parse(userStr);
+                    const ui = document.getElementById('userInfo');
+                    if (ui) {
+                        ui.textContent = user.full_name || user.user_id;
+                        ui.classList.remove('hidden');
+                    }
+                    const adminBtn = document.getElementById('adminUsersBtn');
+                    if (adminBtn && user.role === 'admin') {
+                        adminBtn.classList.remove('!hidden');
+                    }
+                }
+            } catch (e) {
+                console.warn("Could not parse user info", e);
+            }
+
             await loadRates();
             loadRateHistory();
             await loadConfigs();

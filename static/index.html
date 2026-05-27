@@ -140,7 +140,7 @@
         .btn-setup:hover { background: rgba(51,65,85,.8); color: #f8fafc; border-color: rgba(148,163,184,.3); }
         .btn-setup svg { width: 16px; height: 16px; transition: transform .5s ease; }
         .btn-setup:hover svg { transform: rotate(90deg); }
-        .btn-setup::after { content: 'Setup'; position: absolute; top: 110%; right: 0; background: rgba(15,23,42,.95); color: #f8fafc; font-size: 10px; font-weight: 600; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(148,163,184,.2); opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; pointer-events: none; white-space: nowrap; }
+        .btn-setup::after { content: attr(aria-label); position: absolute; top: 110%; right: 0; background: rgba(15,23,42,.95); color: #f8fafc; font-size: 10px; font-weight: 600; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(148,163,184,.2); opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; pointer-events: none; white-space: nowrap; }
         .btn-setup:hover::after { opacity: 1; visibility: visible; }
     </style>
 </head>
@@ -222,14 +222,24 @@
 
             </div>
 
-            <!-- Status badge and Setup -->
+            <!-- Status badge and Actions -->
             <div class="flex items-center gap-3 shrink-0">
+                <span id="userInfo" class="text-[12px] font-semibold text-slate-200 bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 hidden">
+                    <!-- populated by JS -->
+                </span>
+                
                 <span id="statusBadge" class="text-[11px] font-medium text-slate-400 bg-slate-700/30 px-2.5 py-1.5 rounded-full border border-slate-600/30 flex items-center gap-1.5">
                     <span class="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>
                     Loading…
                 </span>
                 
-                <a href="/static/setup.html" class="btn-setup" aria-label="Setup Product Cost Configuration">
+                <a href="/static/admin_users.html" id="adminUsersBtn" class="btn-setup !hidden" aria-label="Manage Users">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                </a>
+                
+                <a href="/static/setup.html" class="btn-setup" aria-label="Setup">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -633,6 +643,25 @@
 
         // ── Boot ─────────────────────────────────────────────────────────────
         async function init() {
+            // Apply user info
+            try {
+                const userStr = localStorage.getItem('sys_user');
+                if (userStr) {
+                    const user = JSON.parse(userStr);
+                    const ui = document.getElementById('userInfo');
+                    if (ui) {
+                        ui.textContent = user.full_name || user.user_id;
+                        ui.classList.remove('hidden');
+                    }
+                    const adminBtn = document.getElementById('adminUsersBtn');
+                    if (adminBtn && user.role === 'admin') {
+                        adminBtn.classList.remove('!hidden');
+                    }
+                }
+            } catch (e) {
+                console.warn("Could not parse user info", e);
+            }
+
             // Load rates immediately — they appear in the header
             loadRates();
 
