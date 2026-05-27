@@ -39,25 +39,22 @@
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS product_cost_config (
     id                      SERIAL       PRIMARY KEY,
-    category_code           VARCHAR(30)  NOT NULL UNIQUE,
+    category_id             VARCHAR(50)  NOT NULL UNIQUE,
     category_name           VARCHAR(100) NOT NULL,
-    steel_type              VARCHAR(5)   NOT NULL DEFAULT 'MS',  -- 'MS' | 'HC' | 'GI'
-    steel_weight_per_mt     FLOAT        NOT NULL,               -- kg of rod per MT output
-    zinc_weight_per_mt      FLOAT        NOT NULL DEFAULT 0,     -- kg of zinc per MT output (0 for non-GI)
-    yield_loss_pct          FLOAT,                               -- optional, informational
-    conversion_cost_per_mt  FLOAT        NOT NULL,               -- ₹/MT: power + labour + overhead
-    packing_cost_per_mt     FLOAT,                               -- optional ₹/MT; NULL = entered per deal
-    min_margin_pct          FLOAT        NOT NULL DEFAULT 10.0,  -- % floor margin (also used as base)
-    max_margin_pct          FLOAT        NOT NULL DEFAULT 15.0,  -- % ceiling margin
-    volume_adj_json         JSONB,                               -- volume bracket adjustments (nullable)
-    is_active               BOOLEAN      NOT NULL DEFAULT TRUE,
+    size_min                FLOAT,
+    size_max                FLOAT,
+    gsm_kg_per_mt           FLOAT,
+    steel_type              VARCHAR(50),
+    steel_weight            FLOAT,
+    yield_loss_pct          FLOAT,
+    min_margin_pct          FLOAT,
+    max_margin_pct          FLOAT,
+    conversion_process      VARCHAR(100),
     updated_by              VARCHAR(100),
     updated_at              TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_pcc_category_code ON product_cost_config(category_code);
-CREATE INDEX IF NOT EXISTS idx_pcc_steel_type     ON product_cost_config(steel_type);
-CREATE INDEX IF NOT EXISTS idx_pcc_is_active      ON product_cost_config(is_active);
+CREATE INDEX IF NOT EXISTS idx_pcc_category_id ON product_cost_config(category_id);
 
 -- RLS
 ALTER TABLE product_cost_config ENABLE ROW LEVEL SECURITY;

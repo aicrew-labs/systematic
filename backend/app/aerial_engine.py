@@ -47,6 +47,8 @@ INSTRUCTIONS:
 Customer Name: {customer_stats.get('name', 'Unknown')}
 Is Repeat Customer: {customer_stats.get('is_repeat', False)}
 Total Past Orders: {customer_stats.get('total_orders', 0)}
+Customer Profile Adjustment (competitive tilt): {customer_stats.get('profile_adj', 0.0):+.1f}%
+Location Adjustment: {customer_stats.get('loc_adj', 0.0):+.1f}%
 
 Product Requested: {request_data.get('product_type', '')} - {request_data.get('product_code', '')}
 
@@ -55,7 +57,7 @@ Product Requested: {request_data.get('product_type', '')} - {request_data.get('p
 - Standard Target Price (Standard margin): ₹{math_context.get('target_price_mt', 0):,.2f}
 - Customer's Historical Average Price for this item: {hist_text}
 
-Based on the Pricing Rules, what is your recommended price and reasoning?
+Based on the Pricing Rules and context adjustments, what is your recommended price and reasoning?
 """
 
         # Fallback: generate a data-driven heuristic response when OpenAI is unavailable
@@ -65,17 +67,24 @@ Based on the Pricing Rules, what is your recommended price and reasoning?
             cust_name = customer_stats.get('name', 'Customer')
             is_repeat = customer_stats.get('is_repeat', False)
             recommended = hist_avg if (hist_avg and hist_avg > target) else target
+            
+            prof_adj = customer_stats.get('profile_adj', 0.0)
+            if prof_adj != 0:
+                adj_type = "discount" if prof_adj < 0 else "premium"
+                prof_text = f" A competitive profile {adj_type} of {abs(prof_adj):.1f}% was factored in based on their past transaction variance against the market median."
+            else:
+                prof_text = ""
 
             if is_repeat:
                 return (
                     f"Recommendation for repeat customer {cust_name}: ₹{recommended:,.2f}/MT. "
                     f"This loyalty price aligns with historical averages while covering the floor cost "
-                    f"of ₹{floor:,.2f}/MT. Maintaining competitive pricing to protect this relationship."
+                    f"of ₹{floor:,.2f}/MT.{prof_text} Maintaining competitive pricing to protect this relationship."
                 )
             else:
                 return (
                     f"Recommendation for new customer {cust_name}: ₹{recommended:,.2f}/MT. "
-                    f"Premium pricing captures a healthy margin above the floor cost of ₹{floor:,.2f}/MT "
+                    f"Premium pricing captures a healthy margin above the floor cost of ₹{floor:,.2f}/MT{prof_text.lower()} "
                     f"while remaining competitive in the current steel market."
                 )
 

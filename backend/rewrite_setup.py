@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+import os
+
+HTML_CONTENT = """<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
@@ -657,22 +659,14 @@
         }
 
         function calculateFloorPrice(c) {
-            // Step 3: Steel Cost
             let steelRate = _fullRates.prime_steel_rate || 0;
             if (c.steel_type.toUpperCase().includes("HC")) steelRate = _fullRates.hc_steel_rate || 0;
             if (c.steel_type.toUpperCase().includes("COMMERCIAL")) steelRate = _fullRates.commercial_steel_rate || 0;
             
             const steelCost = (steelRate / 1000) * (c.steel_weight || 0);
-            
-            // Step 1 & 2: Zinc Cost
-            let size = parseFloat(c.size_min) || 0;
-            if (size === 0) size = 1;
+            const zincCost = (_fullRates.zinc_rate || 0) * (c.gsm_kg_per_mt || 0);
             const yieldLossMult = 1 + ((c.yield_loss_pct || 0) / 100);
-            const zincWeight = (( (c.gsm_kg_per_mt || 0) / size ) * 0.51) * yieldLossMult;
-            const zincRate = _fullRates.zinc_sgh_rate || _fullRates.zinc_rate || 0;
-            const zincCost = zincWeight * zincRate;
             
-            // Step 4: Conversion Cost
             let convCost = 0;
             const p = (c.conversion_process || "").toLowerCase();
             if (p.includes("wiping fine")) convCost = _fullRates.conv_wiping_fine_rate || 0;
@@ -682,8 +676,7 @@
             else if (p.includes("printing")) convCost = _fullRates.conv_printing_rate || 0;
             else if (p.includes("stranding")) convCost = _fullRates.conv_stranding_rate || 0;
 
-            // Step 5: Floor Price
-            return steelCost + zincCost + convCost;
+            return (steelCost + zincCost) * yieldLossMult + convCost;
         }
 
         function updateFloorPrices() {
@@ -892,3 +885,7 @@
     </script>
 </body>
 </html>
+"""
+
+with open('static/setup.html', 'w', encoding='utf-8') as f:
+    f.write(HTML_CONTENT)

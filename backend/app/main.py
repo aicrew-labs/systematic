@@ -112,6 +112,7 @@ def get_customers():
             name=c["name"],
             total_orders=int(c.get("total_orders") or 0),
             is_repeat=bool(c.get("is_repeat")),
+            region_id=c.get("region_id"),
         )
         for c in list_customers()
         if c.get("id") and c.get("name")
@@ -163,10 +164,10 @@ def update_product_cost(config: ProductCostConfigInput):
         raise HTTPException(status_code=500, detail="Failed to save configuration")
     return ProductCostConfigOut(**res)
 
-@app.delete("/api/v1/config/product-costs/{category_code}")
-def delete_product_cost(category_code: str):
+@app.delete("/api/v1/config/product-costs/{category_id}")
+def delete_product_cost(category_id: str):
     from app.database import delete_product_cost_config
-    if delete_product_cost_config(category_code):
+    if delete_product_cost_config(category_id):
         return {"status": "deleted"}
     raise HTTPException(status_code=500, detail="Failed to delete configuration")
 
@@ -183,3 +184,10 @@ def analyze_quote(req: AnalyzeRequest):
         return analyze(req)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/api/v1/locations")
+def get_locations():
+    """Returns all active states and corresponding cities from location_margin_config."""
+    from app.database import list_location_margin_configs
+    return list_location_margin_configs()

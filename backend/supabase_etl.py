@@ -128,7 +128,7 @@ def build_product_resolver() -> callable:
     Loads products into memory and returns a resolver(text) -> product_id|None.
     Match strategy: canonical_type match (loose) + size within ±0.05 mm.
     """
-    res = sb.table("products").select("id, product_type, size_mm, size_label").execute()
+    res = sb.table("products").select("id, product_type, size_mm, size_label").limit(10000).execute()
     products = res.data or []
     # Bucket by canonical type
     buckets: dict[str, list] = {}
@@ -503,7 +503,7 @@ def seed_fg_inventory(unit_map: dict[str, int]):
     today = date.today().isoformat()
 
     # Lookup products by size_label for FK
-    prod_res = sb.table("products").select("id, size_label").execute()
+    prod_res = sb.table("products").select("id, size_label").limit(10000).execute()
     prod_map = {r["size_label"].strip().lower(): r["id"] for r in (prod_res.data or [])}
 
     fg_data = [
@@ -619,8 +619,22 @@ def seed_rm_prices():
 # ─────────────────────────────────────────────────────────────────────────────
 def seed_daily_rates():
     print("\n📈 Seeding daily_rates...")
-    rows = [{"rate_date": date.today().isoformat(), "ms_steel_rate": 52000.0,
-             "hc_steel_rate": 67000.0, "zinc_rate": 260.0, "entered_by": "System Default"}]
+    rows = [{
+        "rate_date": date.today().isoformat(),
+        "prime_steel_rate": 52000.0,
+        "hc_steel_rate": 67000.0,
+        "commercial_steel_rate": 50000.0,
+        "zinc_sgh_rate": 260.0,
+        "zinc_rate": 260.0,
+        "wire_rod_rate": 50000.0,
+        "conv_wiping_fine_rate": 10000.0,
+        "conv_wiping_thick_rate": 8000.0,
+        "conv_heavy_fine_rate": 12000.0,
+        "conv_heavy_thick_rate": 10000.0,
+        "conv_printing_rate": 2000.0,
+        "conv_stranding_rate": 3000.0,
+        "entered_by": "System Default"
+    }]
     upsert_batch("daily_rates", rows)
 
 
@@ -645,7 +659,7 @@ if __name__ == "__main__":
 
     # Build customer name→id map for FK resolution
     print("\n  Building customer name→id lookup...")
-    res = sb.table("customers").select("id, name").execute()
+    res = sb.table("customers").select("id, name").limit(10000).execute()
     customer_map = {r["name"]: r["id"] for r in (res.data or [])}
     print(f"  {len(customer_map)} customers in map")
 

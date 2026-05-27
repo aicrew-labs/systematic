@@ -13,6 +13,7 @@ class CustomerInfo(BaseModel):
     name: str
     total_orders: int = 0
     is_repeat: bool = False
+    region_id: Optional[str] = None
 
 
 class ProductSize(BaseModel):
@@ -29,56 +30,77 @@ class ProductGroup(BaseModel):
 
 
 class DailyRatesOut(BaseModel):
-    ms_steel_rate: float
+    prime_steel_rate: float
     hc_steel_rate: float
+    commercial_steel_rate: float
+    zinc_sgh_rate: float
     zinc_rate: float
-    rate_date: Optional[str] = None   # ISO date of the latest entry e.g. '2026-05-24'
-
+    wire_rod_rate: float
+    conv_wiping_fine_rate: float
+    conv_wiping_thick_rate: float
+    conv_heavy_fine_rate: float
+    conv_heavy_thick_rate: float
+    conv_printing_rate: float
+    conv_stranding_rate: float
+    rate_date: Optional[str] = None
 
 class DailyRatesInput(BaseModel):
-    ms_steel_rate: float
+    prime_steel_rate: float
     hc_steel_rate: float
+    commercial_steel_rate: float
+    zinc_sgh_rate: float
     zinc_rate: float
+    wire_rod_rate: float
+    conv_wiping_fine_rate: float
+    conv_wiping_thick_rate: float
+    conv_heavy_fine_rate: float
+    conv_heavy_thick_rate: float
+    conv_printing_rate: float
+    conv_stranding_rate: float
 
 
 # ── Configuration Models ───────────────────────────────────────────────────
 
 class ProductCostConfigOut(BaseModel):
     id: int
-    category_code: str
+    category_id: str
     category_name: str
-    steel_type: str = "MS"
-    steel_weight_per_mt: float
-    zinc_weight_per_mt: float = 0.0
+    size_min: Optional[float] = None
+    size_max: Optional[float] = None
+    gsm_kg_per_mt: Optional[float] = None
+    steel_type: Optional[str] = None
+    steel_weight: Optional[float] = None
     yield_loss_pct: Optional[float] = None
-    conversion_cost_per_mt: float
-    packing_cost_per_mt: Optional[float] = None
-    min_margin_pct: float = 10.0
-    max_margin_pct: float = 15.0
-    is_active: bool = True
+    min_margin_pct: Optional[float] = None
+    max_margin_pct: Optional[float] = None
+    conversion_process: Optional[str] = None
 
 class ProductCostConfigInput(BaseModel):
-    category_code: str
+    category_id: str
     category_name: str
-    steel_type: str = "MS"
-    steel_weight_per_mt: float
-    zinc_weight_per_mt: float = 0.0
+    size_min: Optional[float] = None
+    size_max: Optional[float] = None
+    gsm_kg_per_mt: Optional[float] = None
+    steel_type: Optional[str] = None
+    steel_weight: Optional[float] = None
     yield_loss_pct: Optional[float] = None
-    conversion_cost_per_mt: float
-    packing_cost_per_mt: Optional[float] = None
-    min_margin_pct: float = 10.0
-    max_margin_pct: float = 15.0
-    is_active: bool = True
+    min_margin_pct: Optional[float] = None
+    max_margin_pct: Optional[float] = None
+    conversion_process: Optional[str] = None
 
 
 # ── Analyze request/response ───────────────────────────────────────────────
 
 class AnalyzeRequest(BaseModel):
-    customer_id: int
-    product_id: int
-    quantity: float
+    customer_id: int | None = None
+    customer_name: str | None = None
+    category_id: str
+    quantity: float | None = None
     payment_terms: Optional[str] = "30 Days"
     mode: Literal["ai", "algo"] = "algo"   # algo by default — no API spend
+    custom_params: dict | None = None
+    state: str | None = None
+    city: str | None = None
 
 
 class ContextCard(BaseModel):
