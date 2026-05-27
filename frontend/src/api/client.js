@@ -25,6 +25,10 @@ export async function getProducts() {
   return request('/products');
 }
 
+export async function getLocations() {
+  return request('/locations');
+}
+
 export async function getDailyRates() {
   return request('/rates');
 }

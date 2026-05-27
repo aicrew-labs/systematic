@@ -164,12 +164,19 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
     else:
         config = get_product_cost_config(req.category_id)
         p_label = config.get('category_name') if config else req.category_id
-        market_inv = invoices_for_category(req.category_id, limit=200)
+        market_inv = []
 
     unit = "MT"
 
-    # ── 1. Pull history ─────────────────────────────────────────────────────
-    cust_inv   = invoices_for_customer(req.customer_id, limit=200) if req.customer_id else []
+    # ── 1. Pull history (parallel queries for performance) ──────────────────────
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        cust_future = executor.submit(invoices_for_customer, req.customer_id, limit=50) if req.customer_id else None
+        market_future = executor.submit(invoices_for_category, req.category_id, limit=50) if not is_custom else None
+    
+    cust_inv = cust_future.result() if cust_future else []
+    if not is_custom and market_future:
+        market_inv = market_future.result()
     enquiries  = []
     won_lookup = {}
     so_lookup  = {}
@@ -319,10 +326,11 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
                     break
 
     if competitiveness_source:
-        profile_adj = round(max(-5.0, min(5.0, pct_diff)), 1)
+        profile_adj = round(max(-2.0, min(5.0, pct_diff)), 1)
 
     loc_adj = 0.0
-    region_id = customer.get("region_id")
+    loc_config = None
+    region_id = req.region_id or customer.get("region_id")
     if region_id:
         loc_config = get_location_margin_config(region_id)
         if loc_config:
@@ -383,30 +391,50 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
     cards = [
         ContextCard(
             label="Customer",
-            value=comp_value,
-            sub_text=cust_sub_text,
+            value=customer.get("name", "New Customer"),
+            sub_text=f"{comp_value} · {cust_sub_text} · {customer.get('location', '')}".strip(" ·"),
         ),
         ContextCard(
             label="PRODUCT FLOOR COST",
             value=floor_val,
             sub_text=floor_sub,
-        ),
-        ContextCard(
-            label="FG Stock",
-            value="N/A",
-            sub_text="Awaiting source data",
-        ),
-        ContextCard(
-            label="Machine Util.",
-            value="N/A",
-            sub_text="Awaiting source data",
-        ),
-        ContextCard(
-            label="Est. Dispatch",
-            value="N/A",
-            sub_text="Awaiting source data",
-        ),
+        )
     ]
+    
+    if loc_config:
+        loc_comp = "Competitive" if loc_config.get("is_competitive") else "Standard"
+        loc_comp_pct = loc_config.get("margin_adjustment_pct", 0.0)
+        cards.append(ContextCard(
+            label="Location Insights",
+            value=f"{loc_comp} ({loc_comp_pct:+.1f}%)",
+            sub_text=loc_config.get("market_driver", "No specific driver"),
+            icon="tag",
+            full_width=True
+        ))
+        
+    dist = loc_config.get("distance_km", 0) if loc_config else 0
+    load_cost = rates.get("loading_cost_per_mt", 0.0) if rates else 0.0
+    fuel_surcharge = rates.get("fuel_surcharge_pct", 0.0) if rates else 0.0
+    freight_rate = rates.get("freight_rate_per_mt_km", 0.0) if rates else 0.0
+    
+    qty = req.quantity or req.quantity_mt
+    if qty and qty > 0:
+        base_freight = dist * freight_rate * qty
+        fuel_cost = base_freight * (fuel_surcharge / 100.0)
+        loading_total = load_cost * qty
+        total_freight_price = base_freight + fuel_cost + loading_total
+        freight_val_str = f"Total: ₹{total_freight_price:,.2f} for {qty} MT"
+    else:
+        freight_val_str = "Provide QTY for freight calculation"
+
+    cards.append(ContextCard(
+        label="Freight Details",
+        value=freight_val_str,
+        sub_text=f"Dist: {dist} km | Load: ₹{load_cost}/MT | Fuel: {fuel_surcharge}% | Rate: ₹{freight_rate}/MT/km",
+        icon="truck",
+        full_width=True
+    ))
+
 
     # ── 7. Market signals ───────────────────────────────────────────────────
     signals: list[MarketSignal] = []
@@ -430,9 +458,10 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
     if profile_adj != 0:
         sign = "+" if profile_adj > 0 else ""
         c_name = customer.get("name", req.customer_name or "Customer")
+        cap_note = f" (Note: raw variance was {pct_diff:+.1f}% but discount was capped at 2%)" if pct_diff < -2.0 else ""
         signals.append(MarketSignal(
             color="amber" if profile_adj < 0 else "blue",
-            text=f"Profile Adj: {sign}{profile_adj}% (On {comp_date}, {c_name} bought {comp_product} @ ₹{comp_rate:,.0f}/{unit}. Variance: {pct_diff:+.1f}% vs same-day market median rate of ₹{comp_median:,.0f}/{unit}. The median is calculated as the 50th percentile of {comp_peers} peer transaction(s) in category '{comp_cat_id}' on {comp_date})",
+            text=f"Profile Adj: {sign}{profile_adj}% (On {comp_date}, {c_name} bought {comp_product} @ ₹{comp_rate:,.0f}/{unit}. Variance: {pct_diff:+.1f}% vs same-day market median rate of ₹{comp_median:,.0f}/{unit}. The median is calculated as the 50th percentile of {comp_peers} peer transaction(s) in category '{comp_cat_id}' on {comp_date}){cap_note}",
         ))
     if pp != 0:
         sign = "+" if pp > 0 else ""
@@ -476,7 +505,7 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
         reasoning = _algo_reasoning(req, customer, p_label, profile, customer_avg,
                                     market_low, market_median, market_high,
                                     sug_low, sug_high, len(market_rates),
-                                    loc_adj, profile_adj, pp, 0, base_min, base_max)
+                                    loc_adj, profile_adj, pp, len(inquiry_history), base_min, base_max, pct_diff if competitiveness_source else 0.0)
 
     return AnalyzeResponse(
         mode_used=req.mode,
@@ -492,7 +521,7 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
 def _algo_reasoning(req, customer, p_label, profile, customer_avg,
                     market_low, market_median, market_high,
                     sug_low, sug_high, sample_size,
-                    loc_adj, profile_adj, pp, lost_count, base_min, base_max) -> str:
+                    loc_adj, profile_adj, pp, lost_count, base_min, base_max, pct_diff: float) -> str:
     name = customer.get("name", req.customer_name or "Customer")
     unit = "MT"
 
@@ -504,7 +533,8 @@ def _algo_reasoning(req, customer, p_label, profile, customer_avg,
         if loc_adj != 0: parts.append(f"Region adds {loc_adj}%.")
         if profile_adj != 0:
             if profile_adj < 0:
-                parts.append(f"A competitive profile discount of {abs(profile_adj):.1f}% was applied because this customer historically secured rates below the market median.")
+                cap_text = f" (discount was capped at 2%)" if pct_diff < -2.0 else ""
+                parts.append(f"A competitive profile discount of {abs(profile_adj):.1f}%{cap_text} was applied because this customer historically secured rates below the market median.")
             else:
                 parts.append(f"A profile markup premium of {profile_adj:.1f}% was applied because this customer historically purchased at rates above the market median.")
         if pp != 0: parts.append(f"'{req.payment_terms}' adds {pp:.1f}%.")
@@ -523,7 +553,8 @@ def _algo_reasoning(req, customer, p_label, profile, customer_avg,
         if loc_adj != 0: parts.append(f"Region adds {loc_adj}%.")
         if profile_adj != 0:
             if profile_adj < 0:
-                parts.append(f"A competitive profile discount of {abs(profile_adj):.1f}% was applied because this customer historically secured rates below the market median.")
+                cap_text = f" (discount was capped at 2%)" if pct_diff < -2.0 else ""
+                parts.append(f"A competitive profile discount of {abs(profile_adj):.1f}%{cap_text} was applied because this customer historically secured rates below the market median.")
             else:
                 parts.append(f"A profile markup premium of {profile_adj:.1f}% was applied because this customer historically purchased at rates above the market median.")
 

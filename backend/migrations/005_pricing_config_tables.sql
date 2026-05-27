@@ -100,6 +100,8 @@ CREATE TABLE IF NOT EXISTS location_margin_config (
     freight_per_mt          FLOAT        NOT NULL DEFAULT 0.0,
     is_competitive          BOOLEAN      NOT NULL DEFAULT FALSE,
     margin_adjustment_pct   FLOAT        NOT NULL DEFAULT 0.0,
+    market_driver           TEXT,
+    key_cities              TEXT,
     notes                   TEXT,
     is_active               BOOLEAN      NOT NULL DEFAULT TRUE,
     updated_by              VARCHAR(100),

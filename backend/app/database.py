@@ -260,9 +260,12 @@ DEFAULT_RATES = {
     "conv_heavy_thick_rate": 10000.0,
     "conv_printing_rate": 2000.0,
     "conv_stranding_rate": 3000.0,
+    "loading_cost_per_mt": 0.0,
+    "fuel_surcharge_pct": 0.0,
+    "freight_rate_per_mt_km": 0.0,
 }
 
-DAILY_RATES_COLUMNS = "prime_steel_rate, hc_steel_rate, commercial_steel_rate, zinc_sgh_rate, zinc_rate, wire_rod_rate, conv_wiping_fine_rate, conv_wiping_thick_rate, conv_heavy_fine_rate, conv_heavy_thick_rate, conv_printing_rate, conv_stranding_rate, rate_date"
+DAILY_RATES_COLUMNS = "prime_steel_rate, hc_steel_rate, commercial_steel_rate, zinc_sgh_rate, zinc_rate, wire_rod_rate, conv_wiping_fine_rate, conv_wiping_thick_rate, conv_heavy_fine_rate, conv_heavy_thick_rate, conv_printing_rate, conv_stranding_rate, loading_cost_per_mt, fuel_surcharge_pct, freight_rate_per_mt_km, rate_date"
 
 def get_daily_rates() -> dict:
     if not supabase:

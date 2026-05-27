@@ -42,6 +42,9 @@ class DailyRatesOut(BaseModel):
     conv_heavy_thick_rate: float
     conv_printing_rate: float
     conv_stranding_rate: float
+    loading_cost_per_mt: float = 0.0
+    fuel_surcharge_pct: float = 0.0
+    freight_rate_per_mt_km: float = 0.0
     rate_date: Optional[str] = None
 
 class DailyRatesInput(BaseModel):
@@ -57,6 +60,9 @@ class DailyRatesInput(BaseModel):
     conv_heavy_thick_rate: float
     conv_printing_rate: float
     conv_stranding_rate: float
+    loading_cost_per_mt: float = 0.0
+    fuel_surcharge_pct: float = 0.0
+    freight_rate_per_mt_km: float = 0.0
 
 
 # ── Configuration Models ───────────────────────────────────────────────────
@@ -96,17 +102,19 @@ class AnalyzeRequest(BaseModel):
     customer_name: str | None = None
     category_id: str
     quantity: float | None = None
+    quantity_mt: float | None = None
     payment_terms: Optional[str] = "30 Days"
     mode: Literal["ai", "algo"] = "algo"   # algo by default — no API spend
     custom_params: dict | None = None
-    state: str | None = None
-    city: str | None = None
+    region_id: str | None = None
 
 
 class ContextCard(BaseModel):
     label: str
     value: str
     sub_text: str = ""
+    icon: str = "user"
+    full_width: bool = False
 
 
 class MarketSignal(BaseModel):

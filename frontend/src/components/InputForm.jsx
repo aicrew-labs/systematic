@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { getCustomers, getProducts } from '../api/client';
+import { getCustomers, getProducts, getLocations } from '../api/client';
 
 const PAYMENT_TERMS = ['Advance', '30 Days', '45 Days', '60 Days'];
 const APPLICATIONS = ['Fencing', 'Cable Armouring', 'Wire Mesh', 'Nails', 'General Engineering', 'Other'];
-const LOCATIONS = ['Gujarat', 'Maharashtra', 'Delhi', 'South India', 'Export', 'Other'];
 
 export default function InputForm({ onSubmit, isLoading }) {
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
+  const [locations, setLocations] = useState([]);
   
   const [customerQuery, setCustomerQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -23,7 +23,8 @@ export default function InputForm({ onSubmit, isLoading }) {
     tensile_strength: 'Medium',
     quantity_mt: '',
     application: '',
-    location: '',
+    state: '',
+    city: '',
     payment_terms: '30 Days',
   });
 
@@ -31,6 +32,7 @@ export default function InputForm({ onSubmit, isLoading }) {
   useEffect(() => {
     getCustomers().then(setCustomers).catch(console.error);
     getProducts().then(setProducts).catch(console.error);
+    getLocations().then(setLocations).catch(console.error);
   }, []);
 
   // Filter customers for dropdown
@@ -46,6 +48,12 @@ export default function InputForm({ onSubmit, isLoading }) {
     ? products.filter(p => p.product_type === form.product_type).map(p => p.product_code)
     : [];
 
+  // Get unique states and cities
+  const availableStates = [...new Set(locations.map(l => l.state_code))].filter(Boolean).sort();
+  const availableCities = form.state 
+    ? locations.filter(l => l.state_code === form.state).map(l => l.location_name).sort()
+    : [];
+
   // Close dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
@@ -58,17 +66,39 @@ export default function InputForm({ onSubmit, isLoading }) {
   }, []);
 
   const selectCustomer = (customer) => {
-    setForm(f => ({ ...f, customer_id: customer.customer_id, customer_type: 'Old' }));
+    let newState = '';
+    let newCity = '';
+    
+    if (customer.region_id) {
+      const locMatch = locations.find(l => l.region_id === customer.region_id);
+      if (locMatch) {
+        newState = locMatch.state_code;
+        newCity = locMatch.location_name;
+      }
+    }
+    
+    setForm(f => ({ ...f, customer_id: customer.customer_id, customer_type: 'Old', state: newState, city: newCity }));
     setCustomerQuery(customer.name);
     setShowDropdown(false);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Find matching region_id based on selected state and city
+    let selectedRegionId = null;
+    if (form.state && form.city) {
+      const locMatch = locations.find(l => l.state_code === form.state && l.location_name === form.city);
+      if (locMatch) {
+        selectedRegionId = locMatch.region_id;
+      }
+    }
+    
     // Allow submitting new customer without ID
     const submitData = {
       ...form,
       customer_id: form.customer_type === 'New' ? 'NEW_CUST' : form.customer_id,
+      region_id: selectedRegionId,
       diameter_mm: form.diameter_mm ? parseFloat(form.diameter_mm) : 2.0,
       zinc_coating_gsm: form.zinc_coating_gsm ? parseFloat(form.zinc_coating_gsm) : 60.0,
       quantity_mt: parseFloat(form.quantity_mt)
@@ -224,7 +254,7 @@ export default function InputForm({ onSubmit, isLoading }) {
           </div>
 
           {/* Commercials: App, Location, Terms */}
-          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-4 gap-5">
             <div>
               <label className="form-label">Application</label>
               <select className="form-select" value={form.application} onChange={e => setForm(f => ({...f, application: e.target.value}))}>
@@ -233,10 +263,17 @@ export default function InputForm({ onSubmit, isLoading }) {
               </select>
             </div>
             <div>
-              <label className="form-label">Location</label>
-              <select className="form-select" value={form.location} onChange={e => setForm(f => ({...f, location: e.target.value}))}>
-                <option value="">Select...</option>
-                {LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
+              <label className="form-label">State</label>
+              <select className="form-select" value={form.state} onChange={e => setForm(f => ({...f, state: e.target.value, city: ''}))}>
+                <option value="">Select State...</option>
+                {availableStates.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="form-label">City</label>
+              <select className="form-select" value={form.city} onChange={e => setForm(f => ({...f, city: e.target.value}))} disabled={!form.state}>
+                <option value="">Select City...</option>
+                {availableCities.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>

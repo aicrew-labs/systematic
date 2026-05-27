@@ -6,6 +6,9 @@ export default function DailyRatesModal({ isOpen, onClose }) {
     steel_ms_rate: 0,
     steel_hc_rate: 0,
     zinc_rate: 0,
+    loading_cost_per_mt: 0,
+    fuel_surcharge_pct: 0,
+    freight_rate_per_mt_km: 0,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -34,6 +37,9 @@ export default function DailyRatesModal({ isOpen, onClose }) {
         steel_ms_rate: Number(rates.steel_ms_rate),
         steel_hc_rate: Number(rates.steel_hc_rate),
         zinc_rate: Number(rates.zinc_rate),
+        loading_cost_per_mt: Number(rates.loading_cost_per_mt),
+        fuel_surcharge_pct: Number(rates.fuel_surcharge_pct),
+        freight_rate_per_mt_km: Number(rates.freight_rate_per_mt_km),
       });
       onClose();
     } catch (err) {
@@ -87,6 +93,45 @@ export default function DailyRatesModal({ isOpen, onClose }) {
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500"
               required
             />
+          </div>
+
+          {/* New Logistics Inputs */}
+          <div className="pt-2 border-t border-slate-700/50">
+            <h3 className="text-sm font-semibold text-slate-400 mb-3 uppercase tracking-wider">Logistics & Freight</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Loading Cost (₹/MT)</label>
+                <input
+                  type="number"
+                  value={rates.loading_cost_per_mt}
+                  onChange={(e) => setRates({ ...rates, loading_cost_per_mt: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Fuel Surcharge (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={rates.fuel_surcharge_pct}
+                  onChange={(e) => setRates({ ...rates, fuel_surcharge_pct: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Freight Rate (₹/MT/km)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={rates.freight_rate_per_mt_km}
+                  onChange={(e) => setRates({ ...rates, freight_rate_per_mt_km: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+              </div>
+            </div>
           </div>
           
           <div className="pt-4 flex justify-end gap-3">

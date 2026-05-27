@@ -267,7 +267,7 @@ HTML_CONTENT = """<!DOCTYPE html>
                     </div>
 
                     <div class="space-y-4">
-                        <h3 class="text-sm font-semibold text-emerald-400 border-b border-slate-700 pb-2">Other Processes</h3>
+                        <h3 class="text-sm font-semibold text-emerald-400 border-b border-slate-700 pb-2">Other Processes & Logistics</h3>
                         <div>
                             <label>Printing Rate ₹/MT</label>
                             <input type="number" id="dr_conv_print" class="input-field" step="1" required>
@@ -275,6 +275,18 @@ HTML_CONTENT = """<!DOCTYPE html>
                         <div>
                             <label>Stranding Rate ₹/MT</label>
                             <input type="number" id="dr_conv_strand" class="input-field" step="1" required>
+                        </div>
+                        <div>
+                            <label>Loading Cost ₹/MT</label>
+                            <input type="number" id="dr_loading_cost" class="input-field" step="1" required>
+                        </div>
+                        <div>
+                            <label>Fuel Surcharge %</label>
+                            <input type="number" id="dr_fuel_surcharge" class="input-field" step="0.1" required>
+                        </div>
+                        <div>
+                            <label>Freight Rate ₹/MT/km</label>
+                            <input type="number" id="dr_freight_rate" class="input-field" step="0.01" required>
                         </div>
 
                         <div class="pt-6">
@@ -415,6 +427,9 @@ HTML_CONTENT = """<!DOCTYPE html>
                 document.getElementById('dr_conv_ht').value = r.conv_heavy_thick_rate;
                 document.getElementById('dr_conv_print').value = r.conv_printing_rate;
                 document.getElementById('dr_conv_strand').value = r.conv_stranding_rate;
+                document.getElementById('dr_loading_cost').value = r.loading_cost_per_mt || 0;
+                document.getElementById('dr_fuel_surcharge').value = r.fuel_surcharge_pct || 0;
+                document.getElementById('dr_freight_rate').value = r.freight_rate_per_mt_km || 0;
 
                 setRateAsOf(r.rate_date || null);
                 ['ratePrime','rateHC','rateComm','rateZincSHG'].forEach(id => document.getElementById(id).classList.remove('rate-edited'));
@@ -512,7 +527,10 @@ HTML_CONTENT = """<!DOCTYPE html>
                 conv_heavy_fine_rate: parseFloat(document.getElementById('dr_conv_hf').value),
                 conv_heavy_thick_rate: parseFloat(document.getElementById('dr_conv_ht').value),
                 conv_printing_rate: parseFloat(document.getElementById('dr_conv_print').value),
-                conv_stranding_rate: parseFloat(document.getElementById('dr_conv_strand').value)
+                conv_stranding_rate: parseFloat(document.getElementById('dr_conv_strand').value),
+                loading_cost_per_mt: parseFloat(document.getElementById('dr_loading_cost').value),
+                fuel_surcharge_pct: parseFloat(document.getElementById('dr_fuel_surcharge').value),
+                freight_rate_per_mt_km: parseFloat(document.getElementById('dr_freight_rate').value)
             };
 
             try {
@@ -556,7 +574,7 @@ HTML_CONTENT = """<!DOCTYPE html>
             const primeData = data.map(d => d.prime_steel_rate);
             const hcData = data.map(d => d.hc_steel_rate);
             const commData = data.map(d => d.commercial_steel_rate);
-            const zincData = data.map(d => d.zinc_rate);
+            const zincData = data.map(d => d.zinc_sgh_rate);
 
             const commonOptions = {
                 responsive: true,
@@ -664,8 +682,12 @@ HTML_CONTENT = """<!DOCTYPE html>
             if (c.steel_type.toUpperCase().includes("COMMERCIAL")) steelRate = _fullRates.commercial_steel_rate || 0;
             
             const steelCost = (steelRate / 1000) * (c.steel_weight || 0);
-            const zincCost = (_fullRates.zinc_rate || 0) * (c.gsm_kg_per_mt || 0);
+            
+            const sizeMin = (c.size_min && c.size_min > 0) ? c.size_min : 1.0;
             const yieldLossMult = 1 + ((c.yield_loss_pct || 0) / 100);
+            const zincWeight = (((c.gsm_kg_per_mt || 0) / sizeMin) * 0.51) * yieldLossMult;
+            const zincRate = _fullRates.zinc_sgh_rate || _fullRates.zinc_rate || 0;
+            const zincCost = zincWeight * zincRate;
             
             let convCost = 0;
             const p = (c.conversion_process || "").toLowerCase();
@@ -676,7 +698,7 @@ HTML_CONTENT = """<!DOCTYPE html>
             else if (p.includes("printing")) convCost = _fullRates.conv_printing_rate || 0;
             else if (p.includes("stranding")) convCost = _fullRates.conv_stranding_rate || 0;
 
-            return (steelCost + zincCost) * yieldLossMult + convCost;
+            return steelCost + zincCost + convCost;
         }
 
         function updateFloorPrices() {
