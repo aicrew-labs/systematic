@@ -3,6 +3,13 @@ import os
 HTML_CONTENT = """<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
+    <script>
+        // Auth Check
+        const token = localStorage.getItem('sys_access_token');
+        if (!token) {
+            window.location.href = '/login';
+        }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quote Intelligence - Setup</title>
@@ -403,7 +410,7 @@ HTML_CONTENT = """<!DOCTYPE html>
 
         async function loadRates() {
             try {
-                const resp = await fetch('/api/v1/rates');
+                const resp = await fetch('/api/v1/rates', { headers: getAuthHeaders() });
                 if (!resp.ok) throw new Error('rates API failed');
                 const r = await resp.json();
                 _fullRates = r;
@@ -555,7 +562,7 @@ HTML_CONTENT = """<!DOCTYPE html>
         async function loadRateHistory() {
             const days = document.getElementById('timeframeSelect').value;
             try {
-                const resp = await fetch(`/api/v1/rates/history?days=${days}`);
+                const resp = await fetch(`/api/v1/rates/history?days=${days}`, { headers: getAuthHeaders() });
                 if (!resp.ok) throw new Error('Failed to fetch history');
                 const history = await resp.json();
                 renderCharts(history.reverse()); // Ensure chronological order if descending
@@ -622,8 +629,8 @@ HTML_CONTENT = """<!DOCTYPE html>
         async function loadConfigs() {
             const tbody = document.getElementById('configTableBody');
             try {
-                const res = await fetch('/api/v1/config/product-costs');
-                if (!res.ok) throw new Error('Failed to fetch data');
+                const res = await fetch('/api/v1/config/product-costs', { headers: getAuthHeaders() });
+                if (res.status === 401) return logout();\n                if (!res.ok) throw new Error('Failed to fetch data');
                 configData = await res.json();
                 renderTable();
             } catch (err) {
@@ -712,7 +719,7 @@ HTML_CONTENT = """<!DOCTYPE html>
 
             try {
                 const res = await fetch(`/api/v1/config/product-costs/${c.category_id}`, { method: 'DELETE' });
-                if (!res.ok) throw new Error(await res.text());
+                if (res.status === 401) return logout();\n                if (!res.ok) throw new Error(await res.text());
                 await loadConfigs();
             } catch (err) {
                 alert('Failed to delete: ' + err.message);
@@ -789,7 +796,7 @@ HTML_CONTENT = """<!DOCTYPE html>
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                if (!res.ok) throw new Error(await res.text());
+                if (res.status === 401) return logout();\n                if (!res.ok) throw new Error(await res.text());
                 
                 closeModal();
                 await loadConfigs(); // Reload table
@@ -891,7 +898,7 @@ HTML_CONTENT = """<!DOCTYPE html>
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
-                    if (!res.ok) throw new Error(await res.text());
+                    if (res.status === 401) return logout();\n                if (!res.ok) throw new Error(await res.text());
                     
                     alert('Successfully updated daily rates from Excel!');
                     await loadRates();

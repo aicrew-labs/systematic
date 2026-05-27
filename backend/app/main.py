@@ -6,9 +6,10 @@ from __future__ import annotations
 import os
 from typing import List
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 
 from app.database import (
@@ -31,7 +32,18 @@ from app.schemas import (
     ProductSize,
     ProductCostConfigOut,
     ProductCostConfigInput,
+    LoginRequest,
+    LoginResponse,
+    UserInfo,
 )
+from app.auth import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    create_access_token,
+    get_current_user,
+    verify_password,
+)
+from app.database import get_user_by_user_id, update_last_login
+from datetime import timedelta
 
 
 app = FastAPI(
@@ -62,6 +74,13 @@ def serve_dashboard():
     if os.path.exists(html_path):
         return FileResponse(html_path)
     return {"status": "ok", "message": "Quote Intelligence API — dashboard not found in /static"}
+
+@app.get("/login", include_in_schema=False)
+def serve_login():
+    html_path = os.path.join(_STATIC_DIR, "login.html")
+    if os.path.exists(html_path):
+        return FileResponse(html_path)
+    return {"status": "ok", "message": "Login page not found"}
 
 
 # ── Health ─────────────────────────────────────────────────────────────────
@@ -102,10 +121,45 @@ def diagnose():
     return info
 
 
+# ── Auth Endpoints ─────────────────────────────────────────────────────────
+
+@app.post("/api/v1/auth/login", response_model=LoginResponse)
+def login(req: LoginRequest):
+    user = get_user_by_user_id(req.user_id)
+    if not user or not verify_password(req.password, user["password"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not user.get("is_active", True):
+        raise HTTPException(status_code=400, detail="Inactive user")
+        
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user["user_id"]}, expires_delta=access_token_expires
+    )
+    
+    update_last_login(user["user_id"])
+    
+    user_info = UserInfo(
+        id=user["id"],
+        user_id=user["user_id"],
+        full_name=user["full_name"],
+        role=user["role"],
+        email=user.get("email")
+    )
+    
+    return LoginResponse(access_token=access_token, user=user_info)
+
+@app.get("/api/v1/auth/me", response_model=UserInfo)
+def read_users_me(current_user: UserInfo = Depends(get_current_user)):
+    return current_user
+
 # ── Read-only listings ─────────────────────────────────────────────────────
 
 @app.get("/api/v1/customers", response_model=List[CustomerInfo])
-def get_customers():
+def get_customers(_=Depends(get_current_user)):
     return [
         CustomerInfo(
             id=int(c["id"]),
@@ -120,7 +174,7 @@ def get_customers():
 
 
 @app.get("/api/v1/products", response_model=List[ProductGroup])
-def get_products():
+def get_products(_=Depends(get_current_user)):
     """Returns products grouped by product_type for the UI dropdown."""
     grouped: dict[str, list[ProductSize]] = {}
     for p in list_products():
@@ -136,36 +190,36 @@ def get_products():
 
 
 @app.get("/api/v1/rates", response_model=DailyRatesOut)
-def get_rates():
+def get_rates(_=Depends(get_current_user)):
     return DailyRatesOut(**get_daily_rates())
 
 
 @app.post("/api/v1/rates", response_model=DailyRatesOut)
-def set_rates(rates: DailyRatesInput):
+def set_rates(rates: DailyRatesInput, _=Depends(get_current_user)):
     return DailyRatesOut(**insert_daily_rates(rates.model_dump()))
 
 
 @app.get("/api/v1/rates/history", response_model=List[DailyRatesOut])
-def get_rates_history(days: int = 7):
+def get_rates_history(days: int = 7, _=Depends(get_current_user)):
     return [DailyRatesOut(**r) for r in get_daily_rates_history(days=days)]
 
 
 # ── Configuration endpoints ────────────────────────────────────────────────
 
 @app.get("/api/v1/config/product-costs", response_model=List[ProductCostConfigOut])
-def get_product_costs():
+def get_product_costs(_=Depends(get_current_user)):
     return [ProductCostConfigOut(**c) for c in list_product_cost_configs()]
 
 
 @app.post("/api/v1/config/product-costs", response_model=ProductCostConfigOut)
-def update_product_cost(config: ProductCostConfigInput):
+def update_product_cost(config: ProductCostConfigInput, _=Depends(get_current_user)):
     res = upsert_product_cost_config(config.model_dump())
     if not res:
         raise HTTPException(status_code=500, detail="Failed to save configuration")
     return ProductCostConfigOut(**res)
 
 @app.delete("/api/v1/config/product-costs/{category_id}")
-def delete_product_cost(category_id: str):
+def delete_product_cost(category_id: str, _=Depends(get_current_user)):
     from app.database import delete_product_cost_config
     if delete_product_cost_config(category_id):
         return {"status": "deleted"}
@@ -175,7 +229,7 @@ def delete_product_cost(category_id: str):
 # ── Single bundled analyzer ────────────────────────────────────────────────
 
 @app.post("/api/v1/analyze", response_model=AnalyzeResponse)
-def analyze_quote(req: AnalyzeRequest):
+def analyze_quote(req: AnalyzeRequest, _=Depends(get_current_user)):
     """
     One endpoint, both modes. `mode='algo'` (default) is free; `mode='ai'` calls OpenAI.
     Returns the full bundle: prices, context, signals, three history tables, reasoning.
@@ -187,7 +241,7 @@ def analyze_quote(req: AnalyzeRequest):
 
 
 @app.get("/api/v1/locations")
-def get_locations():
+def get_locations(_=Depends(get_current_user)):
     """Returns all active states and corresponding cities from location_margin_config."""
     from app.database import list_location_margin_configs
     return list_location_margin_configs()

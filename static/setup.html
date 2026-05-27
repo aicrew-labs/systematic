@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
+    <script>
+        // Auth Check
+        const token = localStorage.getItem('sys_access_token');
+        if (!token) {
+            window.location.href = '/login';
+        }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quote Intelligence - Setup</title>
@@ -401,7 +408,7 @@
 
         async function loadRates() {
             try {
-                const resp = await fetch('/api/v1/rates');
+                const resp = await fetch('/api/v1/rates', { headers: getAuthHeaders() });
                 if (!resp.ok) throw new Error('rates API failed');
                 const r = await resp.json();
                 _fullRates = r;
@@ -483,7 +490,7 @@
             try {
                 const resp = await fetch('/api/v1/rates', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                     body: JSON.stringify(payload),
                 });
                 if (!resp.ok) throw new Error(await resp.text());
@@ -534,7 +541,7 @@
             try {
                 const resp = await fetch('/api/v1/rates', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                     body: JSON.stringify(payload),
                 });
                 if (!resp.ok) throw new Error(await resp.text());
@@ -553,7 +560,7 @@
         async function loadRateHistory() {
             const days = document.getElementById('timeframeSelect').value;
             try {
-                const resp = await fetch(`/api/v1/rates/history?days=${days}`);
+                const resp = await fetch(`/api/v1/rates/history?days=${days}`, { headers: getAuthHeaders() });
                 if (!resp.ok) throw new Error('Failed to fetch history');
                 const history = await resp.json();
                 renderCharts(history.reverse()); // Ensure chronological order if descending
@@ -620,7 +627,8 @@
         async function loadConfigs() {
             const tbody = document.getElementById('configTableBody');
             try {
-                const res = await fetch('/api/v1/config/product-costs');
+                const res = await fetch('/api/v1/config/product-costs', { headers: getAuthHeaders() });
+                if (res.status === 401) return logout();
                 if (!res.ok) throw new Error('Failed to fetch data');
                 configData = await res.json();
                 renderTable();
@@ -709,7 +717,8 @@
             if (!confirm(`Are you sure you want to delete configuration for ${c.category_name} (${c.category_id})?`)) return;
 
             try {
-                const res = await fetch(`/api/v1/config/product-costs/${c.category_id}`, { method: 'DELETE' });
+                const res = await fetch(`/api/v1/config/product-costs/${c.category_id}`, { method: 'DELETE', headers: getAuthHeaders() });
+                if (res.status === 401) return logout();
                 if (!res.ok) throw new Error(await res.text());
                 await loadConfigs();
             } catch (err) {
@@ -784,9 +793,10 @@
             try {
                 const res = await fetch('/api/v1/config/product-costs', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                     body: JSON.stringify(payload)
                 });
+                if (res.status === 401) return logout();
                 if (!res.ok) throw new Error(await res.text());
                 
                 closeModal();
@@ -840,7 +850,7 @@
 
                         const res = await fetch('/api/v1/config/product-costs', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                             body: JSON.stringify(payload)
                         });
                         if (res.ok) successCount++;
@@ -886,10 +896,11 @@
 
                     const res = await fetch('/api/v1/rates', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                         body: JSON.stringify(payload)
                     });
-                    if (!res.ok) throw new Error(await res.text());
+                    if (res.status === 401) return logout();
+                if (!res.ok) throw new Error(await res.text());
                     
                     alert('Successfully updated daily rates from Excel!');
                     await loadRates();

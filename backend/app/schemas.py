@@ -155,3 +155,22 @@ class AnalyzeResponse(BaseModel):
     customer_history: List[HistoryRow]    # won invoices for this customer
     inquiry_history: List[HistoryRow]     # enquiries with computed status
     reasoning: str
+
+
+# ── Auth ───────────────────────────────────────────────────────────────────
+
+class LoginRequest(BaseModel):
+    user_id: str
+    password: str
+
+class UserInfo(BaseModel):
+    id: int
+    user_id: str
+    full_name: str
+    role: str
+    email: Optional[str] = None
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserInfo

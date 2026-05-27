@@ -471,3 +471,24 @@ def list_location_margin_configs() -> list[dict]:
     except Exception as e:
         print(f"Error fetching location_margin_config list: {e}")
         return []
+
+# ── Auth ───────────────────────────────────────────────────────────────────
+
+def get_user_by_user_id(user_id: str) -> dict | None:
+    if not supabase: return None
+    try:
+        res = supabase.table("app_users").select("*").eq("user_id", user_id).limit(1).execute()
+        return (res.data or [None])[0]
+    except Exception as e:
+        print(f"Error fetching user: {e}")
+        return None
+
+def update_last_login(user_id: str) -> None:
+    if not supabase: return
+    try:
+        # TIMESTAMPTZ formatting for Supabase
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).isoformat()
+        supabase.table("app_users").update({"last_login": now}).eq("user_id", user_id).execute()
+    except Exception as e:
+        print(f"Error updating last login: {e}")
