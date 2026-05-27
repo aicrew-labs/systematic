@@ -588,13 +588,20 @@
             btn.classList.add('saving');
             btn.innerHTML = '<div class="spinner"></div> Saving';
 
+            const prime   = parseFloat(document.getElementById('ratePrime').value) || null;
+            const hc      = parseFloat(document.getElementById('rateHC').value) || null;
+            const comm    = parseFloat(document.getElementById('rateComm').value) || null;
+            const zincShg = parseFloat(document.getElementById('rateZincSHG').value) || null;
+
             const payload = {
-                date: new Date().toISOString().split('T')[0],
-                steel_prime_rate: parseFloat(document.getElementById('ratePrime').value) || null,
-                steel_hc_rate: parseFloat(document.getElementById('rateHC').value) || null,
-                steel_comm_rate: parseFloat(document.getElementById('rateComm').value) || null,
-                zinc_shg_rate: parseFloat(document.getElementById('rateZincSHG').value) || null
+                ..._fullRates,
+                prime_steel_rate: prime,
+                hc_steel_rate: hc,
+                commercial_steel_rate: comm,
+                zinc_sgh_rate: zincShg,
+                zinc_rate: zincShg
             };
+            delete payload.rate_date;
 
             try {
                 const res = await fetch(`${API_BASE}/api/v1/rates`, {
@@ -602,8 +609,8 @@
                     headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                     body: JSON.stringify(payload),
                 });
-                if (!resp.ok) throw new Error(await resp.text());
-                const saved = await resp.json();
+                if (!res.ok) throw new Error(await res.text());
+                const saved = await res.json();
                 _fullRates = saved;
                 ['ratePrime','rateHC','rateComm','rateZincSHG'].forEach(id => document.getElementById(id).classList.remove('rate-edited'));
                 setRateAsOf(saved.rate_date || new Date().toISOString().slice(0,10));

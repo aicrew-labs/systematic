@@ -309,7 +309,7 @@ def get_daily_rates_history(days: int = 7) -> list[dict]:
         return []
 
 
-def insert_daily_rates(rates: dict[str, Any]) -> dict:
+def insert_daily_rates(rates: dict[str, Any], user_id: str = "Dashboard") -> dict:
     """Upsert daily rates: update today's row if it exists, otherwise insert."""
     if not supabase:
         return rates
@@ -317,7 +317,7 @@ def insert_daily_rates(rates: dict[str, Any]) -> dict:
     today = _date.today().isoformat()
     
     upsert_data = {k: float(rates[k]) for k in DEFAULT_RATES.keys() if k in rates}
-    upsert_data["entered_by"] = "Dashboard"
+    upsert_data["entered_by"] = user_id
 
     try:
         # Check if a row already exists for today
@@ -357,7 +357,7 @@ def list_product_cost_configs() -> list[dict]:
         print(f"Error fetching product_cost_config: {e}")
         return []
 
-def upsert_product_cost_config(data: dict[str, Any]) -> dict | None:
+def upsert_product_cost_config(data: dict[str, Any], user_id: str = "Dashboard") -> dict | None:
     if not supabase:
         return None
     try:
@@ -370,7 +370,7 @@ def upsert_product_cost_config(data: dict[str, Any]) -> dict | None:
             .execute()
         )
         if existing.data:
-            data["updated_by"] = "Dashboard"
+            data["updated_by"] = user_id
             res = (
                 supabase.table("product_cost_config")
                 .update(data)
@@ -378,7 +378,7 @@ def upsert_product_cost_config(data: dict[str, Any]) -> dict | None:
                 .execute()
             )
         else:
-            data["updated_by"] = "Dashboard"
+            data["updated_by"] = user_id
             res = (
                 supabase.table("product_cost_config")
                 .insert(data)

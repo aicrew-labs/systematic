@@ -552,7 +552,7 @@ HTML_CONTENT = """<!DOCTYPE html>
             try {
                 const resp = await fetch('/api/v1/rates', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                     body: JSON.stringify(payload),
                 });
                 if (!resp.ok) throw new Error(await resp.text());
@@ -603,7 +603,7 @@ HTML_CONTENT = """<!DOCTYPE html>
             try {
                 const resp = await fetch('/api/v1/rates', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                     body: JSON.stringify(payload),
                 });
                 if (!resp.ok) throw new Error(await resp.text());
@@ -853,7 +853,7 @@ HTML_CONTENT = """<!DOCTYPE html>
             try {
                 const res = await fetch('/api/v1/config/product-costs', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                     body: JSON.stringify(payload)
                 });
                 if (res.status === 401) return logout();\n                if (!res.ok) throw new Error(await res.text());
@@ -909,7 +909,7 @@ HTML_CONTENT = """<!DOCTYPE html>
 
                         const res = await fetch('/api/v1/config/product-costs', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                             body: JSON.stringify(payload)
                         });
                         if (res.ok) successCount++;
@@ -955,7 +955,7 @@ HTML_CONTENT = """<!DOCTYPE html>
 
                     const res = await fetch('/api/v1/rates', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                         body: JSON.stringify(payload)
                     });
                     if (res.status === 401) return logout();\n                if (!res.ok) throw new Error(await res.text());

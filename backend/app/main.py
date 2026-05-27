@@ -237,8 +237,8 @@ def get_rates(_=Depends(get_current_user)):
 
 
 @app.post("/api/v1/rates", response_model=DailyRatesOut)
-def set_rates(rates: DailyRatesInput, _=Depends(get_current_user)):
-    return DailyRatesOut(**insert_daily_rates(rates.model_dump()))
+def set_rates(rates: DailyRatesInput, current_user: UserInfo = Depends(get_current_user)):
+    return DailyRatesOut(**insert_daily_rates(rates.model_dump(), user_id=current_user.user_id))
 
 
 @app.get("/api/v1/rates/history", response_model=List[DailyRatesOut])
@@ -254,8 +254,8 @@ def get_product_costs(_=Depends(get_current_user)):
 
 
 @app.post("/api/v1/config/product-costs", response_model=ProductCostConfigOut)
-def update_product_cost(config: ProductCostConfigInput, _=Depends(get_current_user)):
-    res = upsert_product_cost_config(config.model_dump())
+def update_product_cost(config: ProductCostConfigInput, current_user: UserInfo = Depends(get_current_user)):
+    res = upsert_product_cost_config(config.model_dump(), user_id=current_user.user_id)
     if not res:
         raise HTTPException(status_code=500, detail="Failed to save configuration")
     return ProductCostConfigOut(**res)
