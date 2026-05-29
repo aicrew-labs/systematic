@@ -173,13 +173,16 @@ def logout(response: Response):
     response.delete_cookie(key="sys_access_token")
     return {"status": "ok", "message": "Logged out"}
 
+from typing import Optional
+
 class FeedbackRequest(BaseModel):
     feedback: str
+    status: Optional[str] = None
 
 @app.post("/api/v1/auth/feedback")
 def submit_feedback(req: FeedbackRequest, current_user: UserInfo = Depends(get_current_user)):
     from app.database import update_user_feedback
-    success = update_user_feedback(current_user.user_id, req.feedback)
+    success = update_user_feedback(current_user.user_id, req.feedback, req.status)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to save feedback")
     return {"status": "ok", "message": "Feedback saved"}
