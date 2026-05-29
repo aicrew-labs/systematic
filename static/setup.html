@@ -3,10 +3,11 @@
 <head>
     <script>
         // Auth Check
-        const token = localStorage.getItem('sys_access_token');
-        if (!token) {
-            window.location.href = '/login';
-        }
+        fetch('/api/v1/auth/me', { cache: 'no-store' }).then(res => {
+            if (!res.ok) {
+                window.location.href = '/login';
+            }
+        });
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -425,16 +426,11 @@
         let zincChartInst = null;
 
         function getAuthHeaders() {
-            const token = localStorage.getItem('sys_access_token');
-            if (!token) {
-                window.location.href = '/login';
-                return {};
-            }
-            return { 'Authorization': `Bearer ${token}` };
+            return {};
         }
 
-        function logout() {
-            localStorage.removeItem('sys_access_token');
+        async function logout() {
+            await fetch('/api/v1/auth/logout', { method: 'POST' });
             localStorage.removeItem('sys_user');
             window.location.href = '/login';
         }
@@ -442,9 +438,9 @@
         async function init() {
             // Apply user info
             try {
-                const userStr = localStorage.getItem('sys_user');
-                if (userStr) {
-                    const user = JSON.parse(userStr);
+                const meRes = await fetch('/api/v1/auth/me', { cache: 'no-store' });
+                if (meRes.ok) {
+                    const user = await meRes.json();
                     const ui = document.getElementById('userInfo');
                     if (ui) {
                         ui.textContent = user.full_name || user.user_id;

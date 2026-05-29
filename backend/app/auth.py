@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 
@@ -36,12 +36,21 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInfo:
+async def get_current_user(request: Request) -> UserInfo:
+    token = request.cookies.get("sys_access_token")
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    if not token:
+        raise credentials_exception
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
@@ -64,7 +73,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInfo:
         user_id=user_data["user_id"],
         full_name=user_data["full_name"],
         role=user_data["role"],
-        email=user_data.get("email")
+        email=user_data.get("email"),
+        feedback=user_data.get("feedback"),
+        feedback_status=user_data.get("feedback_status"),
+        feedback_dev_comments=user_data.get("feedback_dev_comments")
     )
 
 

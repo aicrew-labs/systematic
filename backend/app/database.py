@@ -519,3 +519,20 @@ def update_user(user_id: str, data: dict) -> dict | None:
     except Exception as e:
         print(f"Error updating user: {e}")
         return None
+
+
+
+
+
+def update_user_feedback(user_id: str, feedback: str) -> bool:
+    try:
+        data = {
+            "feedback": feedback,
+            "feedback_status": "Open",
+            "feedback_dev_comments": None
+        }
+        res = supabase.table("app_users").update(data).eq("user_id", user_id).execute()
+        return bool(res.data)
+    except Exception as e:
+        print(f"Error updating feedback for {user_id}: {e}")
+        return False

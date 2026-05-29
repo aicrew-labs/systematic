@@ -184,9 +184,11 @@
 
     <script>
         // If already logged in, redirect to dashboard
-        if (localStorage.getItem('sys_access_token')) {
-            window.location.href = '/';
-        }
+        fetch('/api/v1/auth/me', { cache: 'no-store' }).then(res => {
+            if (res.ok) {
+                window.location.href = '/';
+            }
+        });
 
         async function handleLogin(e) {
             e.preventDefault();
@@ -219,8 +221,7 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Save token and user info
-                    localStorage.setItem('sys_access_token', data.access_token);
+                    // Save user info for UI (optional, dashboard will fetch it anyway)
                     localStorage.setItem('sys_user', JSON.stringify(data.user));
                     
                     // Redirect to dashboard

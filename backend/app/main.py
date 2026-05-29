@@ -7,7 +7,7 @@ import os
 from typing import List
 from pydantic import BaseModel
 
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
@@ -130,7 +130,7 @@ def diagnose():
 # ── Auth Endpoints ─────────────────────────────────────────────────────────
 
 @app.post("/api/v1/auth/login", response_model=LoginResponse)
-def login(req: LoginRequest):
+def login(req: LoginRequest, response: Response):
     user = get_user_by_user_id(req.user_id)
     if not user or not verify_password(req.password, user["password"]):
         raise HTTPException(
@@ -153,10 +153,36 @@ def login(req: LoginRequest):
         user_id=user["user_id"],
         full_name=user["full_name"],
         role=user["role"],
-        email=user.get("email")
+        email=user.get("email"),
+        feedback=user.get("feedback"),
+        feedback_status=user.get("feedback_status"),
+        feedback_dev_comments=user.get("feedback_dev_comments")
+    )
+    
+    response.set_cookie(
+        key="sys_access_token",
+        value=access_token,
+        httponly=True,
+        samesite="lax"
     )
     
     return LoginResponse(access_token=access_token, user=user_info)
+
+@app.post("/api/v1/auth/logout")
+def logout(response: Response):
+    response.delete_cookie(key="sys_access_token")
+    return {"status": "ok", "message": "Logged out"}
+
+class FeedbackRequest(BaseModel):
+    feedback: str
+
+@app.post("/api/v1/auth/feedback")
+def submit_feedback(req: FeedbackRequest, current_user: UserInfo = Depends(get_current_user)):
+    from app.database import update_user_feedback
+    success = update_user_feedback(current_user.user_id, req.feedback)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to save feedback")
+    return {"status": "ok", "message": "Feedback saved"}
 
 @app.get("/api/v1/auth/me", response_model=UserInfo)
 def read_users_me(current_user: UserInfo = Depends(get_current_user)):
