@@ -5,6 +5,7 @@ Frontend speaks only to FastAPI; FastAPI speaks only to Supabase.
 from __future__ import annotations
 import os
 from typing import List
+from pydantic import BaseModel
 
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -160,6 +161,17 @@ def login(req: LoginRequest):
 @app.get("/api/v1/auth/me", response_model=UserInfo)
 def read_users_me(current_user: UserInfo = Depends(get_current_user)):
     return current_user
+
+class ChangePasswordRequest(BaseModel):
+    new_password: str
+
+@app.put("/api/v1/auth/change-password")
+def change_password(req: ChangePasswordRequest, current_user: UserInfo = Depends(get_current_user)):
+    update_data = {"password": get_password_hash(req.new_password)}
+    updated = update_user(current_user.user_id, update_data)
+    if not updated:
+        raise HTTPException(status_code=500, detail="Failed to update password")
+    return {"status": "ok", "message": "Password updated successfully"}
 
 # ── Admin User Management ──────────────────────────────────────────────────
 

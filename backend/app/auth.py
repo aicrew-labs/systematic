@@ -47,11 +47,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInfo:
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
-    except JWTError:
+    except JWTError as e:
+        print(f"JWT decode failed: {e}")
         raise credentials_exception
 
     user_data = get_user_by_user_id(user_id)
     if user_data is None:
+        print(f"User not found in DB: {user_id}")
         raise credentials_exception
 
     if not user_data.get("is_active"):
