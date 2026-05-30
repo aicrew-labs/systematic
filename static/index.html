@@ -110,17 +110,36 @@
 
         .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .header-inner { padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 1280px; margin: 0 auto; flex-wrap: wrap; }
-        @media (min-width: 768px) { .header-inner { padding: 12px 24px; flex-wrap: nowrap; } }
+        @media (min-width: 1024px) { .header-inner { padding: 12px 24px; flex-wrap: nowrap; } }
+
+        /* ── Header stickiness: only sticky on desktop. On mobile it's a tall
+              block, so keeping it sticky overlaps the content while scrolling. ── */
+        .site-header { position: relative; z-index: 40; }
+        @media (min-width: 1024px) { .site-header { position: sticky; top: 0; } }
+
+        /* ── Mobile header ordering: brand + actions on row 1, rates on row 2 ── */
+        @media (max-width: 1023px) {
+            .header-brand   { order: 1; }
+            .header-actions { order: 2; margin-left: auto; }
+            .rates-bar      { order: 3; width: 100%; }
+        }
 
         /* ── Commodity rates bar ── */
-        .rates-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex: 1; justify-content: center; }
-        @media (min-width: 1024px) { .rates-bar { flex-wrap: nowrap; gap: 8px; } }
+        /* Mobile: clean 2-column grid so fields align instead of stacking narrow. */
+        .rates-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; width: 100%; }
+        .rates-bar > div:last-child { grid-column: 1 / -1; }   /* Confirm spans full width */
+        @media (min-width: 1024px) {
+            .rates-bar { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; flex: 1; justify-content: center; width: auto; }
+            .rates-bar > div:last-child { grid-column: auto; }
+        }
 
-        .rate-field { display: flex; flex-direction: column; align-items: flex-start; min-width: 100px; }
+        .rate-field { display: flex; flex-direction: column; align-items: flex-start; width: 100%; min-width: 0; }
+        @media (min-width: 1024px) { .rate-field { width: auto; min-width: 100px; } }
         .rate-field label { font-size: 9px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #94a3b8; margin-bottom: 2px; white-space: nowrap; }
         .rate-input-wrap { position: relative; display: flex; align-items: center; }
         .rate-input-wrap .rate-prefix { position: absolute; left: 8px; font-size: 11px; color: #64748b; pointer-events: none; font-weight: 600; }
-        .rate-input { width: 108px; padding: 5px 8px 5px 18px; background: rgba(15,23,42,.85); border: 1px solid rgba(148,163,184,.2); border-radius: 8px; color: #f1f5f9; font-size: 12px; font-weight: 600; outline: none; transition: border-color .2s, box-shadow .2s; -moz-appearance: textfield; }
+        .rate-input { width: 100%; padding: 8px 8px 8px 18px; background: rgba(15,23,42,.85); border: 1px solid rgba(148,163,184,.2); border-radius: 8px; color: #f1f5f9; font-size: 16px; font-weight: 600; outline: none; transition: border-color .2s, box-shadow .2s; -moz-appearance: textfield; }
+        @media (min-width: 1024px) { .rate-input { width: 108px; padding: 5px 8px 5px 18px; font-size: 12px; } }
         .rate-input::-webkit-inner-spin-button, .rate-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         .rate-input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.18); }
         .rate-input.rate-edited { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,.12); color: #fbbf24; }
@@ -147,11 +166,11 @@
 </head>
 <body class="font-sans antialiased text-slate-200">
 
-    <header class="border-b border-slate-800/50 backdrop-blur-md bg-slate-900/30 sticky top-0 z-40">
+    <header class="site-header border-b border-slate-800/50 backdrop-blur-md bg-slate-900/30">
         <div class="header-inner">
 
             <!-- Brand -->
-            <div class="flex items-center gap-3 shrink-0">
+            <div class="header-brand flex items-center gap-3 shrink-0">
                 <div class="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
                     <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
                 </div>
@@ -213,8 +232,8 @@
                 <div class="rate-divider"></div>
 
                 <!-- Confirm button + as-of label -->
-                <div class="flex flex-col items-center gap-1">
-                    <button id="confirmRatesBtn" class="btn-confirm" onclick="confirmRates()" disabled>
+                <div class="flex flex-col items-center gap-1 w-full lg:w-auto">
+                    <button id="confirmRatesBtn" class="btn-confirm w-full lg:w-auto justify-center" onclick="confirmRates()" disabled>
                         <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
                         Confirm
                     </button>
@@ -224,7 +243,7 @@
             </div>
 
             <!-- Status badge and Actions -->
-            <div class="flex items-center gap-3 shrink-0">
+            <div class="header-actions flex items-center gap-3 shrink-0">
 
                 <span id="statusBadge" class="text-[11px] font-medium text-slate-400 bg-slate-700/30 px-2.5 py-1.5 rounded-full border border-slate-600/30 flex items-center gap-1.5">
                     <span class="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>
