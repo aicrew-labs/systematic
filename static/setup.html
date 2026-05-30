@@ -47,15 +47,21 @@
         @keyframes fadeIn { to { opacity: 1; } }
         @keyframes slideUp { to { transform: scale(1); opacity: 1; } }
 
-        /* Rates bar */
-        .rates-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex: 1; justify-content: center; }
-        @media (min-width: 1024px) { .rates-bar { flex-wrap: nowrap; gap: 8px; } }
+        /* Rates bar — mobile: clean 2-col grid; desktop: inline flex */
+        .rates-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; width: 100%; }
+        .rates-bar > div:last-child { grid-column: 1 / -1; }
+        @media (min-width: 1024px) {
+            .rates-bar { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; flex: 1; justify-content: center; width: auto; }
+            .rates-bar > div:last-child { grid-column: auto; }
+        }
 
-        .rate-field { display: flex; flex-direction: column; align-items: flex-start; min-width: 100px; }
+        .rate-field { display: flex; flex-direction: column; align-items: flex-start; width: 100%; min-width: 0; }
+        @media (min-width: 1024px) { .rate-field { width: auto; min-width: 100px; } }
         .rate-field label { font-size: 9px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #94a3b8; margin-bottom: 2px; white-space: nowrap; }
         .rate-input-wrap { position: relative; display: flex; align-items: center; }
         .rate-input-wrap .rate-prefix { position: absolute; left: 8px; font-size: 11px; color: #64748b; pointer-events: none; font-weight: 600; }
-        .rate-input { width: 108px; padding: 5px 8px 5px 18px; background: rgba(15,23,42,.85); border: 1px solid rgba(148,163,184,.2); border-radius: 8px; color: #f1f5f9; font-size: 12px; font-weight: 600; outline: none; transition: border-color .2s, box-shadow .2s; -moz-appearance: textfield; }
+        .rate-input { width: 100%; padding: 8px 8px 8px 18px; background: rgba(15,23,42,.85); border: 1px solid rgba(148,163,184,.2); border-radius: 8px; color: #f1f5f9; font-size: 16px; font-weight: 600; outline: none; transition: border-color .2s, box-shadow .2s; -moz-appearance: textfield; }
+        @media (min-width: 1024px) { .rate-input { width: 108px; padding: 5px 8px 5px 18px; font-size: 12px; } }
         .rate-input::-webkit-inner-spin-button, .rate-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         .rate-input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.18); }
         .rate-input.rate-edited { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,.12); color: #fbbf24; }
@@ -63,8 +69,9 @@
         .rate-divider { width: 1px; height: 32px; background: rgba(148,163,184,.12); flex-shrink: 0; display: none; }
         @media (min-width: 1024px) { .rate-divider { display: block; } }
 
-        .btn-confirm { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 9px; font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: all .25s; min-height: 32px; border: none; flex-shrink: 0;
+        .btn-confirm { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; border-radius: 9px; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: all .25s; min-height: 40px; border: none; flex-shrink: 0; width: 100%;
             background: linear-gradient(135deg, #10b981, #059669); color: #fff; box-shadow: 0 2px 12px rgba(16,185,129,.2); }
+        @media (min-width: 1024px) { .btn-confirm { padding: 6px 14px; font-size: 12px; min-height: 32px; width: auto; } }
         .btn-confirm:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 18px rgba(16,185,129,.35); }
         .btn-confirm:active:not(:disabled) { transform: scale(.97); }
         .btn-confirm:disabled { opacity: .5; cursor: not-allowed; }
@@ -79,14 +86,33 @@
         .btn-setup:hover svg { transform: rotate(90deg); }
         .btn-setup::after { content: attr(aria-label); position: absolute; top: 110%; right: 0; background: rgba(15,23,42,.95); color: #f8fafc; font-size: 10px; font-weight: 600; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(148,163,184,.2); opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; pointer-events: none; white-space: nowrap; }
         .btn-setup:hover::after { opacity: 1; visibility: visible; }
+
+        /* ── Header: sticky only on desktop (mobile header is tall → would overlap) ── */
+        .site-header { position: relative; z-index: 40; }
+        @media (min-width: 1024px) { .site-header { position: sticky; top: 0; } }
+
+        /* Header reflow on mobile: brand + actions row 1, rates row 2 */
+        .setup-header-inner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        @media (min-width: 1024px) { .setup-header-inner { flex-wrap: nowrap; } }
+        @media (max-width: 1023px) {
+            .setup-header-inner .header-brand   { order: 1; }
+            .setup-header-inner .header-actions { order: 2; margin-left: auto; }
+            .setup-header-inner .rates-bar      { order: 3; width: 100%; }
+        }
+
+        /* Toolbar button rows: wrap instead of forcing a horizontal scroll on mobile */
+        .toolbar-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .toolbar-actions .input-field { width: 100% !important; }
+        @media (min-width: 640px) { .toolbar-actions .input-field { width: 250px !important; } }
+        .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 1rem; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col relative pb-10" onload="init()">
     
     <!-- Header -->
-    <header class="border-b border-slate-800/50 glass sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center gap-3">
+    <header class="site-header border-b border-slate-800/50 glass">
+        <div class="max-w-7xl mx-auto px-4 py-3 setup-header-inner">
+            <div class="header-brand flex items-center gap-3">
                 <a href="/static/index.html" class="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition" aria-label="Back to Dashboard">
                     <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                 </a>
@@ -145,7 +171,7 @@
             </div>
 
             <!-- Status and Logout -->
-            <div class="flex items-center gap-3 ml-6 shrink-0">
+            <div class="header-actions flex items-center gap-3 shrink-0">
                 <span id="userInfo" class="text-[12px] font-semibold text-slate-200 bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 hidden">
                     <!-- populated by JS -->
                 </span>
@@ -171,7 +197,7 @@
         
         <!-- Charts Section -->
         <div>
-            <div class="flex items-center justify-between mb-4">
+            <div class="section-head">
                 <h2 class="text-lg font-bold text-white">Commodity Price Trends</h2>
                 <select id="timeframeSelect" class="input-field !w-auto" onchange="loadRateHistory()">
                     <option value="7">Last 7 Days</option>
@@ -194,10 +220,10 @@
 
         <!-- Table Section: Product Cost Config -->
         <div>
-            <div class="flex items-center justify-between mb-4">
+            <div class="section-head">
                 <h2 class="text-lg font-bold text-white">Product Cost Configurations</h2>
-                <div class="flex items-center gap-3">
-                    <input type="text" id="searchInput" class="input-field" placeholder="Search categories..." oninput="renderTable()" style="width: 250px; background: rgba(15, 23, 42, 0.4); margin-bottom: 0;">
+                <div class="toolbar-actions">
+                    <input type="text" id="searchInput" class="input-field" placeholder="Search categories..." oninput="renderTable()" style="background: rgba(15, 23, 42, 0.4); margin-bottom: 0;">
                     
                     <label class="btn btn-green flex items-center gap-2 cursor-pointer">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
@@ -236,9 +262,9 @@
 
         <!-- Table Section: Daily Rates -->
         <div>
-            <div class="flex items-center justify-between mb-4">
+            <div class="section-head">
                 <h2 class="text-lg font-bold text-white">Daily Conversion & Additional Rates</h2>
-                <div class="flex items-center gap-3">
+                <div class="toolbar-actions">
                     <label class="btn btn-green flex items-center gap-2 cursor-pointer">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                         Upload Excel
